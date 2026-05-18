@@ -5,9 +5,6 @@ on:
       base-branch:
         description: 'Base branch to use for the builds'
         type: string
-      lto:
-        description: 'LTO mode. Options: "none", "thin", "full"'
-        type: string
       repo:
         description: 'Repository to use for the build'
         type: string
@@ -24,8 +21,11 @@ on:
       module_flags:
         description: 'Extra module flags, e.g. module_webm_enabled=no'
         type: string
-      template_module_flags:
-        description: 'Extra module flags for template build, e.g. module_webm_enabled=no'
+      platform_flags:
+        description: 'Platform-specific module flags, e.g. disable_3d=yes'
+        type: string
+      build_flags:
+        description: 'Additional SCons flags (replaces lto), e.g. lto=thin'
         type: string
 
 env:
@@ -132,15 +132,16 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.tag }}-${{ inputs.tag_release }}_${{ inputs.template_module_flags }}
-          name: "Gonuts ${{ inputs.tag_release }} - ${{ inputs.template_module_flags }}"
+          tag_name: ${{ inputs.tag }}-${{ inputs.tag_release }}_${{ inputs.platform_flags }}
+          name: "Gonuts ${{ inputs.tag_release }} - ${{ inputs.platform_flags }}"
           repository: ${{ inputs.release_repo != '' && inputs.release_repo || github.repository }}
           token: ${{ secrets.GH_TOKEN }}
           body: |
             - Repo: [${{ inputs.repo }}](https://github.com/${{ inputs.repo }})
             - Base Version: ${{ inputs.tag_release }}
-            - Optimization: ${{ inputs.lto }}
-            - Template Module Flags: ${{ inputs.template_module_flags }}
+            - Build Flags: ${{ inputs.build_flags }}
+            - Platform Flags: ${{ inputs.platform_flags }}
+            - Template Module Flags: ${{ inputs.platform_flags }}
             - Build Branch: ${{ inputs.base-branch }}
           files: |
             release/Godot_v${{ inputs.tag_release }}_export_templates.tpz || true

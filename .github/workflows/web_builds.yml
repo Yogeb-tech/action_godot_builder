@@ -5,9 +5,6 @@ on:
       base-branch:
         description: 'Base branch to use for the builds'
         type: string
-      lto:
-        description: 'LTO mode. Options: "none", "thin", "full"'
-        type: string
       repo:
         description: 'Repository to use for the build'
         default: 'godotengine/godot'
@@ -18,8 +15,11 @@ on:
       module_flags:
         description: 'Extra module flags, e.g. module_webm_enabled=no'
         type: string
-      template_module_flags:
-        description: 'Extra module flags for template build, e.g. module_webm_enabled=no'
+      platform_flags:
+        description: 'Platform-specific module flags, e.g. disable_3d=yes'
+        type: string
+      build_flags:
+        description: 'Additional SCons flags (replaces lto), e.g. lto=thin'
         type: string
 
 env:
@@ -53,7 +53,7 @@ jobs:
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
         with:
-          cache-name: web-templates-${{ inputs.template_module_flags }}-${{ inputs.lto }}
+          cache-name: web-templates-${{ inputs.platform_flags }}-${{ inputs.build_flags }}
         continue-on-error: true
 
       - name: Setup Python and SCons
@@ -62,14 +62,14 @@ jobs:
       - name: Compilation (template_release)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.build_flags }} ${{ inputs.platform_flags }}
           platform: web
           target: template_release
 
       - name: Compilation (template_debug)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.build_flags }} ${{ inputs.platform_flags }}
           platform: web
           target: template_debug
 
@@ -83,12 +83,12 @@ jobs:
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
         with:
-          cache-name: web-templates-${{ inputs.template_module_flags }}-${{ inputs.lto }}
+          cache-name: web-templates-${{ inputs.platform_flags }}-${{ inputs.build_flags }}
           purge-cache-script: builder_repo/misc/scripts/purge_cache.py
         continue-on-error: true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: web-templates-${{ inputs.lto }}
+          name: web-templates-${{ inputs.build_flags }}
           path: bin

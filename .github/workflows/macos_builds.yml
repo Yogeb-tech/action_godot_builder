@@ -5,9 +5,6 @@ on:
       base-branch:
         description: 'Base branch to use for the builds'
         type: string
-      lto:
-        description: 'LTO mode. Options: "none", "thin", "full"'
-        type: string
       repo:
         description: 'Repository to use for the build'
         type: string
@@ -17,8 +14,11 @@ on:
       module_flags:
         description: 'Extra module flags, e.g. module_webm_enabled=no'
         type: string
-      template_module_flags:
-        description: 'Extra module flags for template build, e.g. module_webm_enabled=no'
+      platform_flags:
+        description: 'Platform-specific module flags, e.g. disable_3d=yes'
+        type: string
+      build_flags:
+        description: 'Additional SCons flags (replaces lto), e.g. lto=thin'
         type: string
 
 env:
@@ -59,7 +59,7 @@ jobs:
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
         with:
-          cache-name: macos-templates-${{ inputs.template_module_flags }}-${{ inputs.lto }}
+          cache-name: macos-templates-${{ inputs.platform_flags }}-${{ inputs.build_flags }}
         continue-on-error: true
 
       - name: Setup Python and SCons
@@ -72,35 +72,35 @@ jobs:
       - name: Compilation (template_release x86_64)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.template_module_flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.build_flags }} ${{ inputs.platform_flags }}
           platform: macos
           target: template_release
 
       - name: Compilation (template_release arm64)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.build_flags }} ${{ inputs.platform_flags }}
           platform: macos
           target: template_release
 
       - name: Compilation (template_debug x86_64)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.template_module_flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.build_flags }} ${{ inputs.platform_flags }}
           platform: macos
           target: template_debug
 
       - name: Compilation (template_debug arm64)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.build_flags }} ${{ inputs.platform_flags }}
           platform: macos
           target: template_debug
 
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
         with:
-          cache-name: macos-templates-${{ inputs.template_module_flags }}-${{ inputs.lto }}
+          cache-name: macos-templates-${{ inputs.platform_flags }}-${{ inputs.build_flags }}
           purge-cache-script: builder_repo/misc/scripts/purge_cache.py
         continue-on-error: true
 
@@ -115,5 +115,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: macos-templates-${{ inputs.lto }}
+          name: macos-templates-${{ inputs.build_flags }}
           path: bin

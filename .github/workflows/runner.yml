@@ -22,22 +22,14 @@ on:
         description: 'Extra module flags, e.g. module_webm_enabled=no'
         type: string
         default: ''
-      template_module_flags:
-        description: 'Extra module flags for template build, e.g. disable_3d=yes'
+      platform_flags:
+        description: 'Platform-specific module flags, e.g. disable_3d=yes'
         type: string
         default: ''
-      release_repo:
-        description: 'Repository to use for the release (leave empty for current repo)'
+      build_flags:
+        description: 'Additional SCons flags (replaces lto), e.g. lto=thin'
         type: string
         default: ''
-      lto:
-        description: 'LTO mode. Options: "none", "thin", "full"'
-        type: choice
-        default: "lto=thin"
-        options:
-          - "lto=none"
-          - "lto=thin"
-          - "lto=full"
 
 jobs:
   android-build:
@@ -46,9 +38,9 @@ jobs:
     with:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
-      lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      platform_flags: ${{ inputs.platform_flags }}
+      build_flags: ${{ inputs.build_flags }}
     secrets: inherit
 
   ios-build:
@@ -57,9 +49,9 @@ jobs:
     with:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
-      lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      platform_flags: ${{ inputs.platform_flags }}
+      build_flags: ${{ inputs.build_flags }}
     secrets: inherit
 
   linux-build:
@@ -68,9 +60,9 @@ jobs:
     with:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
-      lto: ${{ inputs.lto == 'lto=thin' && 'lto=none' || inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      platform_flags: ${{ inputs.platform_flags }}
+      build_flags: ${{ inputs.build_flags }}
     secrets: inherit
   
   macos-build:
@@ -79,9 +71,9 @@ jobs:
     with:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
-      lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      platform_flags: ${{ inputs.platform_flags }}
+      build_flags: ${{ inputs.build_flags }}
     secrets: inherit
 
   windows-build:
@@ -90,9 +82,9 @@ jobs:
     with:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
-      lto: ${{ inputs.lto == 'lto=thin' && 'lto=none' || inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      platform_flags: ${{ inputs.platform_flags }}
+      build_flags: ${{ inputs.build_flags }}
     secrets: inherit
 
   web-build:
@@ -101,9 +93,9 @@ jobs:
     with:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
-      lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      platform_flags: ${{ inputs.platform_flags }}
+      build_flags: ${{ inputs.build_flags }}
     secrets: inherit
 
   release:
@@ -125,8 +117,8 @@ jobs:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
       tag_release: ${{ inputs.tag_release }}
-      lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      platform_flags: ${{ inputs.platform_flags }}
+      build_flags: ${{ inputs.build_flags }}
       release_repo: ${{ inputs.release_repo }}
     secrets: inherit
