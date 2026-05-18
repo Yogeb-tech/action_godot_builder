@@ -1,4 +1,4 @@
-name: 🤖 Android Builds
+name: 🤖 Android Template Builds
 on:
   workflow_call:
     inputs:
@@ -21,42 +21,15 @@ on:
         description: 'Extra module flags for template build, e.g. module_webm_enabled=no'
         type: string
 
-# Global Settings
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
   SCONSFLAGS: verbose=yes warnings=extra werror=yes debug_symbols=no strict_checks=yes swappy=yes ${{ inputs.module_flags }} use_static_cpp=yes
 
 jobs:
   build-android:
+    name: Android Template Builds
     runs-on: ubuntu-24.04
-    name: ${{ matrix.name }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-# Templates
-          - name: Template Release (target=template_release)
-            target: template_release
-            build-mono: false
-            mono-flags: ''
-
-          - name: Template Debug (target=template_debug)
-            target: template_debug
-            build-mono: false
-            mono-flags: ''
-
-          - name: Template Release Mono (target=template_release)
-            target: template_release
-            build-mono: true
-            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Template Debug Mono (target=template_debug)
-            target: template_debug
-            build-mono: true
-            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -74,33 +47,11 @@ jobs:
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
         with:
-          cache-name: android-${{ matrix.target }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
+          cache-name: android-templates-${{ inputs.template_module_flags }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
-
-      - name: Install Mono toolchain
-        if: matrix.build-mono
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mono-devel
-
-      - name: Setup .NET SDK
-        if: matrix.build-mono
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '6.0.x'
-
-      - name: Install NuGet CLI
-        if: matrix.build-mono
-        run: |
-          set -e
-          mkdir -p "$HOME/.local/bin"
-          curl -sSL https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o "$HOME/.local/bin/nuget.exe"
-          printf '#!/usr/bin/env bash\nexec mono "$HOME/.local/bin/nuget.exe" "$@"\n' > "$HOME/.local/bin/nuget"
-          chmod +x "$HOME/.local/bin/nuget" "$HOME/.local/bin/nuget.exe"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Download pre-built Android Swappy Frame Pacing Library
         uses: dsaltares/fetch-gh-release-asset@1.1.2
@@ -113,45 +64,19 @@ jobs:
       - name: Extract pre-built Android Swappy Frame Pacing Library
         run: 7za x -y swappy/godot-swappy.7z -o${{github.workspace}}/thirdparty/swappy-frame-pacing
 
-      - name: Mono tools build (pre-glue)
-        if: matrix.build-mono
+      - name: Compilation (template_release arm64)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} module_mono_enabled=yes mono_glue=no ${{ inputs.module_flags }}
-          platform: linuxbsd
-          target: editor
-
-      - name: Generate C# glue
-        if: matrix.build-mono
-        run: ./bin/godot.linuxbsd.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
-
-      - name: Compilation x86_64
-        uses: ./.github/actions/godot-build
-        with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=x86_64
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} arch=arm64
           platform: android
-          target: ${{ matrix.target }}
+          target: template_release
 
-      - name: Compilation x86
+      - name: Compilation (template_debug arm32)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=x86
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} arch=arm32 generate_apk=yes
           platform: android
-          target: ${{ matrix.target }}
-
-      - name: Compilation arm64
-        uses: ./.github/actions/godot-build
-        with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=arm64
-          platform: android
-          target: ${{ matrix.target }}
-
-      - name: Compilation arm32
-        uses: ./.github/actions/godot-build
-        with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=arm32 generate_apk=yes
-          platform: android
-          target: ${{ matrix.target }}
+          target: template_debug
 
       - name: Checkout builder repo (cache purge script)
         uses: actions/checkout@v6
@@ -163,34 +88,12 @@ jobs:
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
         with:
-          cache-name: android-${{ matrix.target }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
+          cache-name: android-templates-${{ inputs.template_module_flags }}-${{ inputs.lto }}
           purge-cache-script: builder_repo/misc/scripts/purge_cache.py
         continue-on-error: true
-
-      - name: Build .NET solutions
-        if: matrix.build-mono
-        run: |
-          dotnet --info
-          ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=android --werror
-
-      - name: Rename Android sources for release
-        if: ${{ matrix.target == 'template_release' && matrix.build-mono == false }}
-        run: mv bin/android_source.zip bin/android_source.release.zip
-
-      - name: Rename Android sources for debug
-        if: ${{ matrix.target == 'template_debug' && matrix.build-mono == false }}
-        run: mv bin/android_source.zip bin/android_source.debug.zip
-
-      - name: Rename Android sources for release (Mono)
-        if: ${{ matrix.target == 'template_release' && matrix.build-mono == true }}
-        run: mv bin/android_source.zip bin/android_source.mono.release.zip
-
-      - name: Rename Android sources for debug (Mono)
-        if: ${{ matrix.target == 'template_debug' && matrix.build-mono == true }}
-        run: mv bin/android_source.zip bin/android_source.mono.debug.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: android-${{ matrix.target }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
+          name: android-templates-${{ inputs.lto }}
           path: bin

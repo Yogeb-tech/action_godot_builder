@@ -1,4 +1,4 @@
-name: 🍏 iOS Builds
+name: 🍏 iOS Template Builds
 on:
   workflow_call:
     inputs:
@@ -21,29 +21,15 @@ on:
         description: 'Extra module flags for template build, e.g. module_webm_enabled=no'
         type: string
 
-# Global Settings
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
-  SCONSFLAGS: verbose=yes warnings=extra werror=yes debug_symbols=no strict_checks=yes ${{ inputs.module_flags }} use_static_cpp=yes
+  SCONSFLAGS: verbose=yes warnings=extra werror=yes debug_symbols=no strict_checks=yes use_static_cpp=yes
 
 jobs:
   build-ios:
+    name: iOS Template Builds
     runs-on: macos-latest
-    name: ${{ matrix.name }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Template
-            build-mono: false
-            scons-mono-flags: ''
-
-          - name: Template Mono
-            build-mono: true
-            scons-mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -62,73 +48,39 @@ jobs:
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
         with:
-          cache-name: ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
+          cache-name: ios-templates-${{ inputs.template_module_flags }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
 
-      - name: Install Mono toolchain
-        if: matrix.build-mono
-        run: |
-          brew list mono || brew install mono
-
-      - name: Setup .NET SDK
-        if: matrix.build-mono
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '6.0.x'
-
       - name: Setup Vulkan SDK
         run: |
           sh builder_repo/install_vulkan_sdk_macos.sh
 
-      - name: Mono tools build (pre-glue)
-        if: matrix.build-mono
+      - name: Compilation (template_debug arm64)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no
-          platform: macos
-          target: editor
-
-      - name: Generate C# glue
-        if: matrix.build-mono
-        run: ./bin/godot.macos.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
-
-      - name: Compilation Debug (arm64)
-        uses: ./.github/actions/godot-build
-        with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }}
           platform: ios
           target: template_debug
 
-      - name: Compilation Release (arm64)
+      - name: Compilation (template_release arm64)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }} generate_bundle=yes
+          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} generate_bundle=yes
           platform: ios
           target: template_release
 
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
         with:
-          cache-name: ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
+          cache-name: ios-templates-${{ inputs.template_module_flags }}-${{ inputs.lto }}
           purge-cache-script: builder_repo/misc/scripts/purge_cache.py
         continue-on-error: true
-
-      - name: Build .NET solutions
-        if: matrix.build-mono
-        run: |
-          dotnet --info
-          ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=ios --werror
-
-      - name: Rename iOS export zip for Mono (avoid artifact merge collision)
-        if: matrix.build-mono
-        run: |
-          if [ -f bin/godot_ios.zip ]; then mv bin/godot_ios.zip bin/godot_ios_mono.zip; fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
+          name: ios-templates-${{ inputs.lto }}
           path: bin

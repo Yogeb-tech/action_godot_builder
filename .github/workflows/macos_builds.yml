@@ -1,4 +1,4 @@
-name: 🍎 macOS Builds
+name: 🍎 macOS Template Builds
 on:
   workflow_call:
     inputs:
@@ -21,51 +21,15 @@ on:
         description: 'Extra module flags for template build, e.g. module_webm_enabled=no'
         type: string
 
-# Global Settings
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
-  SCONSFLAGS: verbose=yes warnings=extra werror=yes strict_checks=yes debug_symbols=no use_static_cpp=yes "accesskit_sdk_path=${{ github.workspace }}/accesskit-c-0.18.0/"
+  SCONSFLAGS: verbose=yes warnings=extra werror=yes debug_symbols=no strict_checks=yes use_static_cpp=yes
 
 jobs:
   build-macos:
+    name: macOS Template Builds
     runs-on: macos-latest
-    name: ${{ matrix.name }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Editor (target=editor)
-            target: editor
-            build-mono: false
-            scons-mono-flags: ''
-
-          - name: Template (target=template_release)
-            target: template_release
-            build-mono: false
-            scons-mono-flags: ''
-          
-          - name: Template (target=template_debug)
-            target: template_debug
-            build-mono: false
-            scons-mono-flags: ''
-
-          - name: Editor Mono (target=editor)
-            target: editor
-            build-mono: true
-            scons-mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Template Mono (target=template_release)
-            target: template_release
-            build-mono: true
-            scons-mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Template Mono (target=template_debug)
-            target: template_debug
-            build-mono: true
-            scons-mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -73,9 +37,6 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.tag }}
           submodules: recursive
-
-      - name: Select Xcode 26
-        run: sudo xcode-select -s /Applications/Xcode_26.0.1.app
 
       - name: Checkout builder scripts (Vulkan, purge_cache, etc.)
         uses: actions/checkout@v6
@@ -98,96 +59,61 @@ jobs:
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
         with:
-          cache-name: macos-${{ matrix.target }}-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
+          cache-name: macos-templates-${{ inputs.template_module_flags }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
 
-      - name: Install Mono toolchain
-        if: matrix.build-mono
-        run: |
-          brew list mono || brew install mono
-
-      - name: Setup .NET SDK
-        if: matrix.build-mono
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '6.0.x'
-
       - name: Setup Vulkan SDK
         run: |
           sh builder_repo/install_vulkan_sdk_macos.sh
 
-      - name: Mono tools build (pre-glue)
-        if: matrix.build-mono
+      - name: Compilation (template_release x86_64)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no
+          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.template_module_flags }}
           platform: macos
-          target: editor
+          target: template_release
 
-      - name: Generate C# glue
-        if: matrix.build-mono
-        run: ./bin/godot.macos.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
-
-      - name: Compilation (x86_64 editor)
-        if: matrix.target == 'editor'
+      - name: Compilation (template_release arm64)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }}
           platform: macos
-          target: ${{ matrix.target }}
+          target: template_release
 
-      - name: Compilation (arm64 editor)
-        if: matrix.target == 'editor'
+      - name: Compilation (template_debug x86_64)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.template_module_flags }}
           platform: macos
-          target: ${{ matrix.target }}
+          target: template_debug
 
-      - name: Compilation (x86_64 template)
-        if: matrix.target != 'editor'
+      - name: Compilation (template_debug arm64)
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }}
           platform: macos
-          target: ${{ matrix.target }}
-
-      - name: Compilation (arm64 template)
-        if: matrix.target != 'editor'
-        uses: ./.github/actions/godot-build
-        with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
-          platform: macos
-          target: ${{ matrix.target }}
+          target: template_debug
 
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
         with:
-          cache-name: macos-${{ matrix.target }}-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
+          cache-name: macos-templates-${{ inputs.template_module_flags }}-${{ inputs.lto }}
           purge-cache-script: builder_repo/misc/scripts/purge_cache.py
         continue-on-error: true
 
-      - name: Build .NET solutions
-        if: matrix.build-mono
+      - name: Prepare macOS template artifacts (create universal)
         run: |
-          dotnet --info
-          ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=macos --werror
-
-      - name: Prepare artifact
-        run: |
-          mono_suffix=""
-          if [ "${{ matrix.build-mono }}" = 'true' ]; then
-            mono_suffix=".mono"
-          fi
-          lipo -create ./bin/godot.macos.${{ matrix.target }}.x86_64${mono_suffix} ./bin/godot.macos.${{ matrix.target }}.arm64${mono_suffix} -output ./bin/godot.macos.${{ matrix.target }}${mono_suffix}.universal
-          strip bin/godot.*
-          chmod +x bin/godot.*
+          set -e
+          lipo -create ./bin/godot.macos.template_release.x86_64 ./bin/godot.macos.template_release.arm64 -output ./bin/godot.macos.template_release.universal || true
+          lipo -create ./bin/godot.macos.template_debug.x86_64 ./bin/godot.macos.template_debug.arm64 -output ./bin/godot.macos.template_debug.universal || true
+          strip bin/godot.* || true
+          chmod +x bin/godot.* || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: macos-${{ matrix.target }}${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
+          name: macos-templates-${{ inputs.lto }}
           path: bin
