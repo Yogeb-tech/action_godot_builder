@@ -1,0 +1,45 @@
+name: Dummy Godot Build (for frontend testing)
+
+on:
+  workflow_dispatch:
+    inputs:
+      godot_version:
+        description: "Godot version (dummy, ignored)"
+        required: true
+        default: "4.3-stable"
+        type: string
+      platform:
+        description: "Target platform"
+        required: true
+        type: choice
+        options:
+          - windows
+      encryption_key:
+        description: "Dummy key (ignored)"
+        required: false
+        type: string
+
+concurrency:
+  group: godot-build-queue
+  cancel-in-progress: false
+
+jobs:
+  dummy-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Create dummy export templates
+        run: |
+          mkdir -p output
+          echo "This is a dummy export template for testing" > output/README.txt
+          # Create a fake template zip
+          cd output
+          zip -r godot-templates-windows-${{ inputs.godot_version }}-dummy.zip .
+          cd ..
+
+      - name: Upload dummy artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-${{ inputs.godot_version }}-windows-templates-dummy
+          path: output/*.zip
+          retention-days: 1
