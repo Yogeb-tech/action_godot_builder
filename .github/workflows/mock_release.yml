@@ -1,0 +1,55 @@
+name: Test Release Workflow
+
+on:
+  workflow_call:
+    inputs:
+      base-branch:
+        description: "Base branch to use for the builds"
+        type: string
+      lto:
+        description: 'LTO mode. Options: "none", "thin", "full"'
+        type: string
+      repo:
+        description: "Repository to use for the build"
+        type: string
+      release_repo:
+        description: "Repository to use for the release"
+        type: string
+        default: ""
+      tag:
+        description: "tag to use for the build"
+        type: string
+      tag_release:
+        description: "tag to use for releasing the build"
+        type: string
+      module_flags:
+        description: "Extra module flags, e.g. module_webm_enabled=no"
+        type: string
+      template_module_flags:
+        description: "Extra module flags for template build, e.g. module_webm_enabled=no"
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print inputs and flags
+        run: |
+          echo "base-branch: '${{ inputs.base-branch }}'"
+          echo "lto: '${{ inputs.lto }}'"
+          echo "repo: '${{ inputs.repo }}'"
+          echo "release_repo: '${{ inputs.release_repo }}'"
+          echo "tag: '${{ inputs.tag }}'"
+          echo "tag_release: '${{ inputs.tag_release }}'"
+          echo "module_flags: '${{ inputs.module_flags }}'"
+          echo "template_module_flags: '${{ inputs.template_module_flags }}'"
+
+          echo ""
+          echo "SCONSFLAGS:"
+          echo "${SCONSFLAGS}"
+
+      - name: Pause before finishing
+        run: |
+          echo "Waiting 60 seconds..."
+          sleep 60
