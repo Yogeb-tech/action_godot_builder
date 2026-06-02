@@ -21,6 +21,22 @@ on:
       template_module_flags:
         description: 'Extra module flags for template build, e.g. module_webm_enabled=no'
         type: string
+      run_editor:
+        description: 'Run editor builds'
+        type: boolean
+        default: true
+      run_editor_mono:
+        description: 'Run editor mono builds'
+        type: boolean
+        default: false
+      run_template:
+        description: 'Run template builds'
+        type: boolean
+        default: true
+      run_template_mono:
+        description: 'Run template mono builds'
+        type: boolean
+        default: false
 
 # Global Settings
 env:
@@ -97,6 +113,7 @@ jobs:
         uses: ./.github/actions/godot-deps
 
       - name: Compilation
+        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ inputs.lto }} ${{ inputs.template_module_flags }}

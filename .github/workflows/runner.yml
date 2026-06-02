@@ -3,33 +3,33 @@ on:
   workflow_dispatch:
     inputs:
       repo:
-        description: 'Repository to use for the build'
+        description: "Repository to use for the build"
         type: string
-        default: 'godotengine/godot'
+        default: "godotengine/godot"
       base-branch:
-        description: 'Base branch to use for the builds'
+        description: "Base branch to use for the builds"
         type: string
-        default: '4.6'
+        default: "4.6"
       tag:
-        description: 'tag to use for downloading the repo'
+        description: "tag to use for downloading the repo"
         type: string
-        default: '4.6.1-stable'
+        default: "4.6.1-stable"
       tag_release:
-        description: 'tag to use for releasing the build'
+        description: "tag to use for releasing the build"
         type: string
-        default: '4.6.1.stable'
+        default: "4.6.1.stable"
       module_flags:
-        description: 'Extra module flags, e.g. module_webm_enabled=no'
+        description: "Extra module flags, e.g. module_webm_enabled=no"
         type: string
-        default: ''
+        default: ""
       template_module_flags:
-        description: 'Extra module flags for template build, e.g. disable_3d=yes'
+        description: "Extra module flags for template build, e.g. disable_3d=yes"
         type: string
-        default: ''
+        default: ""
       release_repo:
-        description: 'Repository to use for the release (leave empty for current repo)'
+        description: "Repository to use for the release (leave empty for current repo)"
         type: string
-        default: ''
+        default: ""
       lto:
         description: 'LTO mode. Options: "none", "thin", "full"'
         type: choice
@@ -38,9 +38,30 @@ on:
           - "lto=none"
           - "lto=thin"
           - "lto=full"
+      platform_type:
+        description: "Comma-separated list of platforms to build (e.g. windows,web,ios,linux,macos,android)"
+        type: string
+        default: "windows,web,ios,linux,macos,android"
+      run_editor:
+        description: "Run editor builds"
+        type: boolean
+        default: true
+      run_editor_mono:
+        description: "Run editor mono builds"
+        type: boolean
+        default: false
+      run_template:
+        description: "Run template (export) builds"
+        type: boolean
+        default: true
+      run_template_mono:
+        description: "Run template mono builds"
+        type: boolean
+        default: false
 
 jobs:
   android-build:
+    if: contains(inputs.platform_type, 'android')
     name: 🤖 Android
     uses: ./.github/workflows/android_builds.yml
     with:
@@ -49,9 +70,14 @@ jobs:
       lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      run_editor: ${{ inputs.run_editor }}
+      run_editor_mono: ${{ inputs.run_editor_mono }}
+      run_template: ${{ inputs.run_template }}
+      run_template_mono: ${{ inputs.run_template_mono }}
     secrets: inherit
 
   ios-build:
+    if: contains(inputs.platform_type, 'ios')
     name: 🍏 iOS
     uses: ./.github/workflows/ios_builds.yml
     with:
@@ -60,9 +86,14 @@ jobs:
       lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      run_editor: ${{ inputs.run_editor }}
+      run_editor_mono: ${{ inputs.run_editor_mono }}
+      run_template: ${{ inputs.run_template }}
+      run_template_mono: ${{ inputs.run_template_mono }}
     secrets: inherit
 
   linux-build:
+    if: contains(inputs.platform_type, 'linux')
     name: 🐧 Linux
     uses: ./.github/workflows/linux_builds.yml
     with:
@@ -71,9 +102,14 @@ jobs:
       lto: ${{ inputs.lto == 'lto=thin' && 'lto=none' || inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      run_editor: ${{ inputs.run_editor }}
+      run_editor_mono: ${{ inputs.run_editor_mono }}
+      run_template: ${{ inputs.run_template }}
+      run_template_mono: ${{ inputs.run_template_mono }}
     secrets: inherit
-  
+
   macos-build:
+    if: contains(inputs.platform_type, 'macos')
     name: 🍎 macOS
     uses: ./.github/workflows/macos_builds.yml
     with:
@@ -82,9 +118,14 @@ jobs:
       lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      run_editor: ${{ inputs.run_editor }}
+      run_editor_mono: ${{ inputs.run_editor_mono }}
+      run_template: ${{ inputs.run_template }}
+      run_template_mono: ${{ inputs.run_template_mono }}
     secrets: inherit
 
   windows-build:
+    if: contains(inputs.platform_type, 'windows')
     name: 🏁 Windows
     uses: ./.github/workflows/windows_builds.yml
     with:
@@ -93,9 +134,14 @@ jobs:
       lto: ${{ inputs.lto == 'lto=thin' && 'lto=none' || inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      run_editor: ${{ inputs.run_editor }}
+      run_editor_mono: ${{ inputs.run_editor_mono }}
+      run_template: ${{ inputs.run_template }}
+      run_template_mono: ${{ inputs.run_template_mono }}
     secrets: inherit
 
   web-build:
+    if: contains(inputs.platform_type, 'web')
     name: 🌐 Web
     uses: ./.github/workflows/web_builds.yml
     with:
@@ -104,6 +150,10 @@ jobs:
       lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      run_editor: ${{ inputs.run_editor }}
+      run_editor_mono: ${{ inputs.run_editor_mono }}
+      run_template: ${{ inputs.run_template }}
+      run_template_mono: ${{ inputs.run_template_mono }}
     secrets: inherit
 
   release:

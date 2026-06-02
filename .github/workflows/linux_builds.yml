@@ -20,6 +20,22 @@ on:
       template_module_flags:
         description: 'Extra module flags for template build, e.g. module_webm_enabled=no'
         type: string
+      run_editor:
+        description: 'Run editor builds'
+        type: boolean
+        default: true
+      run_editor_mono:
+        description: 'Run editor mono builds'
+        type: boolean
+        default: false
+      run_template:
+        description: 'Run template builds'
+        type: boolean
+        default: true
+      run_template_mono:
+        description: 'Run template mono builds'
+        type: boolean
+        default: false
 
 # Global Settings
 env:
@@ -162,7 +178,7 @@ jobs:
           ./bin/godot.linuxbsd.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
 
       - name: Compilation (Editor)
-        if: matrix.target == 'editor'
+        if: ${{ matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true)) }}
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ matrix.scons-mono-flags }} ${{ inputs.lto }} ${{ inputs.module_flags }}
@@ -170,7 +186,7 @@ jobs:
           target: ${{ matrix.target }}
       
       - name: Compilation (Template)
-        if: matrix.target != 'editor'
+        if: ${{ matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ matrix.scons-mono-flags }} ${{ inputs.lto }} ${{ inputs.template_module_flags }}
