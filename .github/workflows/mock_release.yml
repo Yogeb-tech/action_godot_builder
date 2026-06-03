@@ -28,6 +28,10 @@ on:
       template_module_flags:
         description: "Extra module flags for template build, e.g. module_webm_enabled=no"
         type: string
+      encryption_key:
+        description: "Encryption key to include in templates (script_encryption_key)"
+        type: string
+        default: ""
 
 jobs:
   release:
@@ -44,6 +48,7 @@ jobs:
           echo "tag_release: '${{ inputs.tag_release }}'"
           echo "module_flags: '${{ inputs.module_flags }}'"
           echo "template_module_flags: '${{ inputs.template_module_flags }}'"
+          echo "encryption-key: '${{ inputs.encryption_key }}'"
 
           echo ""
           echo "SCONSFLAGS:"
