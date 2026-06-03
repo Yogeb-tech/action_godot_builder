@@ -1,7 +1,7 @@
 name: Test Release Workflow
 
 on:
-  workflow_call:
+  workflow_trigger:
     inputs:
       base-branch:
         description: "Base branch to use for the builds"
