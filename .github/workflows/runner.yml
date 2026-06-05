@@ -68,8 +68,8 @@ jobs:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
       lto: ${{ inputs.lto }}
-      module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      module_flags: ${{ replace(replace(replace(inputs.module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
+      template_module_flags: ${{ replace(replace(replace(inputs.template_module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
       run_editor: ${{ inputs.run_editor }}
       run_editor_mono: ${{ inputs.run_editor_mono }}
       run_template: ${{ inputs.run_template }}
@@ -84,8 +84,8 @@ jobs:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
       lto: ${{ inputs.lto }}
-      module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      module_flags: ${{ replace(replace(replace(inputs.module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
+      template_module_flags: ${{ replace(replace(replace(inputs.template_module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
       run_editor: ${{ inputs.run_editor }}
       run_editor_mono: ${{ inputs.run_editor_mono }}
       run_template: ${{ inputs.run_template }}
@@ -100,8 +100,8 @@ jobs:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
       lto: ${{ inputs.lto == 'lto=thin' && 'lto=none' || inputs.lto }}
-      module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      module_flags: ${{ replace(replace(replace(inputs.module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
+      template_module_flags: ${{ replace(replace(replace(inputs.template_module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
       run_editor: ${{ inputs.run_editor }}
       run_editor_mono: ${{ inputs.run_editor_mono }}
       run_template: ${{ inputs.run_template }}
@@ -116,8 +116,8 @@ jobs:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
       lto: ${{ inputs.lto }}
-      module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      module_flags: ${{ replace(replace(replace(inputs.module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
+      template_module_flags: ${{ replace(replace(replace(inputs.template_module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
       run_editor: ${{ inputs.run_editor }}
       run_editor_mono: ${{ inputs.run_editor_mono }}
       run_template: ${{ inputs.run_template }}
@@ -132,8 +132,8 @@ jobs:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
       lto: ${{ inputs.lto == 'lto=thin' && 'lto=none' || inputs.lto }}
-      module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      module_flags: ${{ replace(replace(replace(inputs.module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
+      template_module_flags: ${{ replace(replace(replace(inputs.template_module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
       run_editor: ${{ inputs.run_editor }}
       run_editor_mono: ${{ inputs.run_editor_mono }}
       run_template: ${{ inputs.run_template }}
@@ -148,8 +148,8 @@ jobs:
       repo: ${{ inputs.repo }}
       tag: ${{ inputs.tag }}
       lto: ${{ inputs.lto }}
-      module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      module_flags: ${{ replace(replace(replace(inputs.module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
+      template_module_flags: ${{ replace(replace(replace(inputs.template_module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
       run_editor: ${{ inputs.run_editor }}
       run_editor_mono: ${{ inputs.run_editor_mono }}
       run_template: ${{ inputs.run_template }}
@@ -176,7 +176,7 @@ jobs:
       tag: ${{ inputs.tag }}
       tag_release: ${{ inputs.tag_release }}
       lto: ${{ inputs.lto }}
-      module_flags: ${{ inputs.module_flags }}
-      template_module_flags: ${{ inputs.template_module_flags }}
+      module_flags: ${{ replace(replace(replace(inputs.module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
+      template_module_flags: ${{ replace(replace(replace(inputs.template_module_flags, 'lto=thin',''), 'lto=full',''), 'lto=none','') }}
       release_repo: ${{ inputs.release_repo }}
     secrets: inherit
