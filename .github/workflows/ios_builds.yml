@@ -112,7 +112,7 @@ jobs:
         run: ./bin/godot.macos.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
 
       - name: Compilation Debug (arm64)
-        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
+        if: ${{ (matrix.build-mono == true && inputs.run_template_mono == true) || (matrix.build-mono != true && inputs.run_template == true) }}
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
@@ -120,7 +120,7 @@ jobs:
           target: template_debug
 
       - name: Compilation Release (arm64)
-        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
+        if: ${{ (matrix.build-mono == true && inputs.run_template_mono == true) || (matrix.build-mono != true && inputs.run_template == true) }}
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }} generate_bundle=yes

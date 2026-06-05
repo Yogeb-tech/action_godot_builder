@@ -20,6 +20,10 @@ on:
       template_module_flags:
         description: 'Extra module flags for template build, e.g. module_webm_enabled=no'
         type: string
+      encryption_key:
+        description: 'Optional encryption key to apply to template builds'
+        type: string
+        default: ''
       run_editor:
         description: 'Run editor builds'
         type: boolean
@@ -156,6 +160,12 @@ jobs:
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
 
+      - name: Export encryption key for template builds
+        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
+        run: |
+          Add-Content -Path $env:GITHUB_ENV -Value "ENCRYPTION_KEY=${{ inputs.encryption_key }}"
+        shell: pwsh
+
       - name: Download Direct3D 12 SDK components
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
@@ -242,6 +252,8 @@ jobs:
       - name: Compilation (template)
         if: ${{ matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
         uses: ./.github/actions/godot-build
+        env:
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }}
           platform: windows

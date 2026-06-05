@@ -38,6 +38,7 @@ env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
   SCONSFLAGS: verbose=yes warnings=extra werror=yes strict_checks=yes debug_symbols=no ${{ inputs.module_flags }}
+  APPLE_SIGNING_IDENTITY: ""
 
 jobs:
   release:

@@ -26,6 +26,10 @@ on:
         description: "Extra module flags for template build, e.g. disable_3d=yes"
         type: string
         default: ""
+      encryption_key:
+        description: "Optional encryption key to apply to template builds"
+        type: string
+        default: ""
       release_repo:
         description: "Repository to use for the release (leave empty for current repo)"
         type: string
@@ -70,6 +74,7 @@ jobs:
       lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      encryption_key: ${{ inputs.encryption_key }}
       run_editor: ${{ inputs.run_editor }}
       run_editor_mono: ${{ inputs.run_editor_mono }}
       run_template: ${{ inputs.run_template }}
@@ -86,6 +91,7 @@ jobs:
       lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      encryption_key: ${{ inputs.encryption_key }}
       run_editor: ${{ inputs.run_editor }}
       run_editor_mono: ${{ inputs.run_editor_mono }}
       run_template: ${{ inputs.run_template }}
@@ -102,6 +108,7 @@ jobs:
       lto: ${{ inputs.lto == 'lto=thin' && 'lto=none' || inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      encryption_key: ${{ inputs.encryption_key }}
       run_editor: ${{ inputs.run_editor }}
       run_editor_mono: ${{ inputs.run_editor_mono }}
       run_template: ${{ inputs.run_template }}
@@ -118,6 +125,7 @@ jobs:
       lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      encryption_key: ${{ inputs.encryption_key }}
       run_editor: ${{ inputs.run_editor }}
       run_editor_mono: ${{ inputs.run_editor_mono }}
       run_template: ${{ inputs.run_template }}
@@ -134,6 +142,7 @@ jobs:
       lto: ${{ inputs.lto == 'lto=thin' && 'lto=none' || inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      encryption_key: ${{ inputs.encryption_key }}
       run_editor: ${{ inputs.run_editor }}
       run_editor_mono: ${{ inputs.run_editor_mono }}
       run_template: ${{ inputs.run_template }}
@@ -150,6 +159,7 @@ jobs:
       lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      encryption_key: ${{ inputs.encryption_key }}
       run_editor: ${{ inputs.run_editor }}
       run_editor_mono: ${{ inputs.run_editor_mono }}
       run_template: ${{ inputs.run_template }}
@@ -178,5 +188,6 @@ jobs:
       lto: ${{ inputs.lto }}
       module_flags: ${{ inputs.module_flags }}
       template_module_flags: ${{ inputs.template_module_flags }}
+      encryption_key: ${{ inputs.encryption_key }}
       release_repo: ${{ inputs.release_repo }}
     secrets: inherit

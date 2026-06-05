@@ -20,6 +20,10 @@ on:
       template_module_flags:
         description: "Extra module flags for template build, e.g. module_webm_enabled=no"
         type: string
+      encryption_key:
+        description: "Optional encryption key to apply to template builds"
+        type: string
+        default: ""
       run_editor:
         description: 'Run editor builds'
         type: boolean
@@ -92,9 +96,13 @@ jobs:
         with:
           cache-name: android-${{ matrix.target }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
         continue-on-error: true
-
+       
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
+
+      - name: Export encryption key for template builds
+        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
+        run: echo "ENCRYPTION_KEY=${{ inputs.encryption_key }}" >> $GITHUB_ENV
 
       - name: Install Mono toolchain
         if: matrix.build-mono
@@ -144,6 +152,8 @@ jobs:
       - name: Compilation x86_64
         if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
         uses: ./.github/actions/godot-build
+        env:
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=x86_64
           platform: android
@@ -152,6 +162,8 @@ jobs:
       - name: Compilation x86
         if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
         uses: ./.github/actions/godot-build
+        env:
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=x86
           platform: android
@@ -160,6 +172,8 @@ jobs:
       - name: Compilation arm64
         if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
         uses: ./.github/actions/godot-build
+        env:
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=arm64
           platform: android
@@ -168,6 +182,8 @@ jobs:
       - name: Compilation arm32
         if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
         uses: ./.github/actions/godot-build
+        env:
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=arm32 generate_apk=yes
           platform: android
