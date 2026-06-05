@@ -130,7 +130,7 @@ jobs:
         run: 7za x -y swappy/godot-swappy.7z -o${{github.workspace}}/thirdparty/swappy-frame-pacing
 
       - name: Mono tools build (pre-glue)
-        if: matrix.build-mono
+        if: ${{ matrix.build-mono && ((matrix.target == 'editor' && inputs.run_editor_mono == true) || (matrix.target != 'editor' && inputs.run_template_mono == true)) }}
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} module_mono_enabled=yes mono_glue=no ${{ inputs.module_flags }}
@@ -138,7 +138,7 @@ jobs:
           target: editor
 
       - name: Generate C# glue
-        if: matrix.build-mono
+        if: ${{ matrix.build-mono && ((matrix.target == 'editor' && inputs.run_editor_mono == true) || (matrix.target != 'editor' && inputs.run_template_mono == true)) }}
         run: ./bin/godot.linuxbsd.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
 
       - name: Compilation x86_64
@@ -195,19 +195,39 @@ jobs:
 
       - name: Rename Android sources for release
         if: ${{ matrix.target == 'template_release' && matrix.build-mono == false }}
-        run: mv bin/android_source.zip bin/android_source.release.zip
+        run: |
+          if [ -f bin/android_source.zip ]; then
+            mv bin/android_source.zip bin/android_source.release.zip
+          else
+            echo "Warning: bin/android_source.zip not found for release (non-mono)"
+          fi
 
       - name: Rename Android sources for debug
         if: ${{ matrix.target == 'template_debug' && matrix.build-mono == false }}
-        run: mv bin/android_source.zip bin/android_source.debug.zip
+        run: |
+          if [ -f bin/android_source.zip ]; then
+            mv bin/android_source.zip bin/android_source.debug.zip
+          else
+            echo "Warning: bin/android_source.zip not found for debug (non-mono)"
+          fi
 
       - name: Rename Android sources for release (Mono)
         if: ${{ matrix.target == 'template_release' && matrix.build-mono == true }}
-        run: mv bin/android_source.zip bin/android_source.mono.release.zip
+        run: |
+          if [ -f bin/android_source.zip ]; then
+            mv bin/android_source.zip bin/android_source.mono.release.zip
+          else
+            echo "Warning: bin/android_source.zip not found for release (mono)"
+          fi
 
       - name: Rename Android sources for debug (Mono)
         if: ${{ matrix.target == 'template_debug' && matrix.build-mono == true }}
-        run: mv bin/android_source.zip bin/android_source.mono.debug.zip
+        run: |
+          if [ -f bin/android_source.zip ]; then
+            mv bin/android_source.zip bin/android_source.mono.debug.zip
+          else
+            echo "Warning: bin/android_source.zip not found for debug (mono)"
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
