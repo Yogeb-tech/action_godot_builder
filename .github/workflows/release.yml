@@ -1,36 +1,44 @@
 name: 🚀 Create Release
+
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
-      base-branch:
-        description: "Base branch to use for the builds"
-        type: string
-      lto:
-        description: 'LTO mode. Options: "none", "thin", "full"'
-        type: string
       repo:
         description: "Repository to use for the build"
         type: string
-      release_repo:
-        description: "Repository to use for the release"
+        default: "godotengine/godot"
+      base-branch:
+        description: "Base branch to use for the builds"
         type: string
-        default: ""
+        default: "4.6"
       tag:
-        description: "tag to use for the build"
+        description: "tag to use for downloading the repo"
         type: string
+        default: "4.6.1-stable"
       tag_release:
         description: "tag to use for releasing the build"
         type: string
+        default: "4.6.1.stable"
       module_flags:
         description: "Extra module flags, e.g. module_webm_enabled=no"
         type: string
+        default: ""
       template_module_flags:
-        description: "Extra module flags for template build, e.g. module_webm_enabled=no"
-        type: string
-      encryption_key:
-        description: "Encryption key to include in templates (script_encryption_key)"
+        description: "Extra module flags for template build, e.g. disable_3d=yes"
         type: string
         default: ""
+      release_repo:
+        description: "Repository to use for the release (leave empty for current repo)"
+        type: string
+        default: ""
+      lto:
+        description: 'LTO mode. Options: "none", "thin", "full"'
+        type: choice
+        default: "lto=thin"
+        options:
+          - "lto=none"
+          - "lto=thin"
+          - "lto=full"
 
 # Global Settings
 env:
