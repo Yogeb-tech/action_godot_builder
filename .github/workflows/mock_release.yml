@@ -39,6 +39,22 @@ on:
           - "lto=none"
           - "lto=thin"
           - "lto=full"
+      run_editor:
+        description: "Run editor builds"
+        type: boolean
+        default: true
+      run_editor_mono:
+        description: "Run editor mono builds"
+        type: boolean
+        default: false
+      run_template:
+        description: "Run template (export) builds"
+        type: boolean
+        default: true
+      run_template_mono:
+        description: "Run template mono builds"
+        type: boolean
+        default: false
 
 jobs:
   release:
