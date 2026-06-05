@@ -27,6 +27,10 @@ on:
         description: "Extra module flags for template build, e.g. disable_3d=yes"
         type: string
         default: ""
+      encryption_key:
+        description: "Optional encryption key to apply to template builds"
+        type: string
+        default: ""
       release_repo:
         description: "Repository to use for the release (leave empty for current repo)"
         type: string
@@ -39,6 +43,44 @@ on:
           - "lto=none"
           - "lto=thin"
           - "lto=full"
+  workflow_call:
+    inputs:
+      repo:
+        required: false
+        type: string
+        default: "godotengine/godot"
+      base-branch:
+        required: false
+        type: string
+        default: "4.6"
+      tag:
+        required: false
+        type: string
+        default: "4.6.1-stable"
+      tag_release:
+        required: false
+        type: string
+        default: "4.6.1.stable"
+      module_flags:
+        required: false
+        type: string
+        default: ""
+      template_module_flags:
+        required: false
+        type: string
+        default: ""
+      encryption_key:
+        required: false
+        type: string
+        default: ""
+      release_repo:
+        required: false
+        type: string
+        default: ""
+      lto:
+        required: false
+        type: string
+        default: "lto=thin"
 
 # Global Settings
 env:
