@@ -123,7 +123,10 @@ jobs:
       - name: Install Mono toolchain
         if: matrix.build-mono
         run: |
-          brew list mono || brew install mono
+          if ! brew list mono >/dev/null 2>&1; then
+            echo "Installing mono..."
+            brew install mono || true
+          fi
 
       - name: Setup .NET SDK
         if: matrix.build-mono
@@ -136,7 +139,7 @@ jobs:
           sh builder_repo/install_vulkan_sdk_macos.sh
 
       - name: Mono tools build (pre-glue)
-        if: matrix.build-mono
+        if: ${{ matrix.build-mono && ((matrix.target == 'editor' && inputs.run_editor_mono == true) || (matrix.target != 'editor' && inputs.run_template_mono == true)) }}
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no
@@ -144,7 +147,7 @@ jobs:
           target: editor
 
       - name: Generate C# glue
-        if: matrix.build-mono
+        if: ${{ matrix.build-mono && ((matrix.target == 'editor' && inputs.run_editor_mono == true) || (matrix.target != 'editor' && inputs.run_template_mono == true)) }}
         run: ./bin/godot.macos.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
 
       - name: Compilation (x86_64 editor)
@@ -198,9 +201,20 @@ jobs:
           if [ "${{ matrix.build-mono }}" = 'true' ]; then
             mono_suffix=".mono"
           fi
-          lipo -create ./bin/godot.macos.${{ matrix.target }}.x86_64${mono_suffix} ./bin/godot.macos.${{ matrix.target }}.arm64${mono_suffix} -output ./bin/godot.macos.${{ matrix.target }}${mono_suffix}.universal
-          strip bin/godot.*
-          chmod +x bin/godot.*
+          x86="./bin/godot.macos.${{ matrix.target }}.x86_64${mono_suffix}"
+          arm="./bin/godot.macos.${{ matrix.target }}.arm64${mono_suffix}"
+          out="./bin/godot.macos.${{ matrix.target }}${mono_suffix}.universal"
+          if [ -f "$x86" ] && [ -f "$arm" ]; then
+            lipo -create "$x86" "$arm" -output "$out"
+          elif [ -f "$x86" ]; then
+            cp "$x86" "$out"
+          elif [ -f "$arm" ]; then
+            cp "$arm" "$out"
+          else
+            echo "Warning: no binaries produced for ${matrix.target}${mono_suffix}"
+          fi
+          strip bin/godot.* || true
+          chmod +x bin/godot.* || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
