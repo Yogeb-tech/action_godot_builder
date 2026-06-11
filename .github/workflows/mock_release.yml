@@ -76,7 +76,7 @@ jobs:
             echo "tag_release: '${{ inputs.tag_release }}'"
             echo "module_flags: '${{ inputs.module_flags }}'"
             echo "template_module_flags: '${{ inputs.template_module_flags }}'"
-            echo "encryption-key: '${{ inputs.encryption_key }}'"
+            echo "encryption-key: '[MASKED]'"
 
             echo ""
             echo "SCONSFLAGS:"

@@ -118,6 +118,9 @@ jobs:
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
 
+      - name: Mask encryption key
+        run: echo "::add-mask::${{ inputs.encryption_key }}"
+
       - name: Compilation
         uses: ./.github/actions/godot-build
         env:

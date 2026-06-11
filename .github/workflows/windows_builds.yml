@@ -160,6 +160,11 @@ jobs:
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
 
+      - name: Mask encryption key
+        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
+        run: Write-Host "::add-mask::${{ inputs.encryption_key }}"
+        shell: pwsh
+
       - name: Export encryption key for template builds
         if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
         run: |
