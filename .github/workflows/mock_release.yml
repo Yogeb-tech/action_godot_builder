@@ -27,6 +27,10 @@ on:
         description: "Extra module flags for template build, e.g. disable_3d=yes"
         type: string
         default: ""
+      encryption_key:
+        description: "Optional encryption key to apply to template builds"
+        type: string
+        default: ""
       release_repo:
         description: "Repository to use for the release (leave empty for current repo)"
         type: string
@@ -63,19 +67,21 @@ jobs:
     steps:
       - name: Print inputs and flags
         run: |
+          {
           echo "base-branch: '${{ inputs.base-branch }}'"
-          echo "lto: '${{ inputs.lto }}'"
-          echo "repo: '${{ inputs.repo }}'"
-          echo "release_repo: '${{ inputs.release_repo }}'"
-          echo "tag: '${{ inputs.tag }}'"
-          echo "tag_release: '${{ inputs.tag_release }}'"
-          echo "module_flags: '${{ inputs.module_flags }}'"
-          echo "template_module_flags: '${{ inputs.template_module_flags }}'"
-          echo "encryption-key: '${{ inputs.encryption_key }}'"
+            echo "lto: '${{ inputs.lto }}'"
+            echo "repo: '${{ inputs.repo }}'"
+            echo "release_repo: '${{ inputs.release_repo }}'"
+            echo "tag: '${{ inputs.tag }}'"
+            echo "tag_release: '${{ inputs.tag_release }}'"
+            echo "module_flags: '${{ inputs.module_flags }}'"
+            echo "template_module_flags: '${{ inputs.template_module_flags }}'"
+            echo "encryption-key: '${{ inputs.encryption_key }}'"
 
-          echo ""
-          echo "SCONSFLAGS:"
-          echo "${SCONSFLAGS}"
+            echo ""
+            echo "SCONSFLAGS:"
+            echo "${SCONSFLAGS}"
+          } > debug.txt
 
       - name: Pause before finishing
         run: |
