@@ -83,6 +83,28 @@ jobs:
             echo "${SCONSFLAGS}"
           } > debug.txt
 
+      - name: Create build artifact
+        run: |
+          echo "Build info for tag: ${{ inputs.tag_release }}" > build_info.txt
+          echo "LTO mode: ${{ inputs.lto }}" >> build_info.txt
+          echo "Module flags: ${{ inputs.module_flags }}" >> build_info.txt
+          echo "Template flags: ${{ inputs.template_module_flags }}" >> build_info.txt
+          echo "Created on: $(date)" >> build_info.txt
+          
+          mkdir -p build_output
+          cp debug.txt build_output/
+          cp build_info.txt build_output/
+          echo "This is a simulated build output" > build_output/readme.txt
+          
+          zip -r godot_build_${{ inputs.tag_release }}.zip build_output/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-build-${{ inputs.tag_release }}-${{ github.run_id }}
+          path: godot_build_${{ inputs.tag_release }}.zip
+          retention-days: 90
+
       - name: Pause before finishing
         run: |
           echo "Waiting 60 seconds..."
