@@ -157,7 +157,7 @@ jobs:
         if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
         uses: ./.github/actions/godot-build
         env:
-          SCRIPT_AES256_ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=x86_64
           platform: android
@@ -167,7 +167,7 @@ jobs:
         if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
         uses: ./.github/actions/godot-build
         env:
-          SCRIPT_AES256_ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=x86
           platform: android
@@ -177,7 +177,7 @@ jobs:
         if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
         uses: ./.github/actions/godot-build
         env:
-          SCRIPT_AES256_ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=arm64
           platform: android
@@ -187,7 +187,7 @@ jobs:
         if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
         uses: ./.github/actions/godot-build
         env:
-          SCRIPT_AES256_ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=arm32 generate_apk=yes
           platform: android

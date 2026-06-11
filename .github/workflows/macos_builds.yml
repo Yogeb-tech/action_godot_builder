@@ -182,7 +182,7 @@ jobs:
         if: ${{ matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
         uses: ./.github/actions/godot-build
         env:
-          SCRIPT_AES256_ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
           platform: macos
@@ -192,7 +192,7 @@ jobs:
         if: ${{ matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
         uses: ./.github/actions/godot-build
         env:
-          SCRIPT_AES256_ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
           platform: macos
