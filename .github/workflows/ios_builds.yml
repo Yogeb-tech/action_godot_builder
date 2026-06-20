@@ -96,17 +96,15 @@ jobs:
       - name: Install Mono toolchain
         if: matrix.build-mono
         run: |
-          if ! command -v brew >/dev/null 2>&1; then
+            if ! command -v brew >/dev/null 2>&1; then
             echo "Homebrew not found on runner — aborting install"
             exit 1
-          fi
-          brew update --quiet || true
-          brew tap aws/tap || true
-          brew tap azure/bicep || true
-          if ! brew list mono >/dev/null 2>&1; then
+            fi
+            brew update --quiet || true
+            if ! brew list mono >/dev/null 2>&1; then
             echo "Installing mono..."
             brew install mono
-          fi
+            fi
 
       - name: Setup .NET SDK
         if: matrix.build-mono
