@@ -2,6 +2,10 @@ name: 🔗 GHA
 on:
   workflow_dispatch:
     inputs:
+      request_id:
+        description: "Unique ID for this request"
+        type: string
+        default: ""
       repo:
         description: "Repository to use for the build"
         type: string
