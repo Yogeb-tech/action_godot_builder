@@ -164,7 +164,7 @@ jobs:
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=x86_64
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=x86_64
           platform: android
           target: ${{ matrix.target }}
 
@@ -174,7 +174,7 @@ jobs:
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=x86
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=x86
           platform: android
           target: ${{ matrix.target }}
 
@@ -184,7 +184,7 @@ jobs:
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=arm64
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=arm64
           platform: android
           target: ${{ matrix.target }}
 
@@ -194,7 +194,7 @@ jobs:
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=arm32 generate_apk=yes
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} arch=arm32 generate_apk=yes
           platform: android
           target: ${{ matrix.target }}
 

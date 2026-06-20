@@ -122,7 +122,7 @@ jobs:
         if: matrix.build-mono
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no
+          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no
           platform: macos
           target: editor
 
@@ -134,7 +134,7 @@ jobs:
         if: ${{ (matrix.build-mono == true && inputs.run_template_mono == true) || (matrix.build-mono != true && inputs.run_template == true) }}
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
           platform: ios
           target: template_debug
 
@@ -142,7 +142,7 @@ jobs:
         if: ${{ (matrix.build-mono == true && inputs.run_template_mono == true) || (matrix.build-mono != true && inputs.run_template == true) }}
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }} generate_bundle=yes
+          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }} generate_bundle=yes
           platform: ios
           target: template_release
 

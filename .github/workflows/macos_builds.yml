@@ -166,7 +166,7 @@ jobs:
         if: ${{ matrix.build-mono && ((matrix.target == 'editor' && inputs.run_editor_mono == true) || (matrix.target != 'editor' && inputs.run_template_mono == true)) }}
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no
+          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no
           platform: macos
           target: editor
 
@@ -178,7 +178,7 @@ jobs:
         if: ${{ matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true)) }}
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.scons-mono-flags }}
           platform: macos
           target: ${{ matrix.target }}
 
@@ -186,7 +186,7 @@ jobs:
         if: ${{ matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true)) }}
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.scons-mono-flags }}
           platform: macos
           target: ${{ matrix.target }}
 
@@ -196,7 +196,7 @@ jobs:
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
           platform: macos
           target: ${{ matrix.target }}
 
@@ -206,7 +206,7 @@ jobs:
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
           platform: macos
           target: ${{ matrix.target }}
 

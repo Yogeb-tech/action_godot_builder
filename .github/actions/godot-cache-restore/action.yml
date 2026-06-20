@@ -8,6 +8,14 @@ inputs:
     description: The SCons cache path.
     default: ${{ github.workspace }}/.scons_cache/
 
+outputs:
+  cache-matched-key:
+    description: Key of the cache that was restored (primary or restore-keys)
+    value: ${{ steps.cache-ping.outputs.cache-matched-key }}
+  cache-hit:
+    description: 'Whether an exact cache hit occurred for the primary key'
+    value: ${{ steps.cache-ping.outputs.cache-hit }}
+
 runs:
   using: composite
   steps:
@@ -24,8 +32,6 @@ runs:
       shell: sh
       run: find "${{ inputs.scons-cache }}" >> redundant.txt
 
-    # This is done after pulling the default cache so that PRs can integrate any potential changes
-    # from the default branch without conflicting with whatever local changes were already made.
     - name: Restore local cache
       uses: actions/cache/restore@v5
       if: github.ref_name != github.event.repository.default_branch

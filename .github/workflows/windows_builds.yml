@@ -255,7 +255,7 @@ jobs:
         if: ${{ matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true)) }}
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.mono-flags }}
           platform: windows
           target: ${{ matrix.target }}
 
@@ -265,7 +265,7 @@ jobs:
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }}
           platform: windows
           target: ${{ matrix.target }}
 

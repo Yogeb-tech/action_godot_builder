@@ -19,9 +19,23 @@ runs:
       shell: sh
       run: python3 ${{ inputs.purge-cache-script }} ${{ env.CACHE_TIMESTAMP }} "${{ inputs.scons-cache }}"
 
+    - name: Check existing cache (lookup only)
+      uses: actions/cache/restore@v5
+      id: cache-check
+      with:
+        path: ${{ inputs.scons-cache }}
+        key: ${{ inputs.cache-name }}|${{ github.ref_name }}
+        lookup-only: true
+
     - name: Save SCons cache directory
+      if: steps.cache-check.outputs.cache-matched-key == ''
       uses: actions/cache/save@v5
       with:
         path: ${{ inputs.scons-cache }}
         key: ${{ inputs.cache-name }}|${{ github.ref_name }}|${{ github.sha }}
         compression: zstd
+
+    - name: Skip saving cache (already exists)
+      if: steps.cache-check.outputs.cache-matched-key != ''
+      shell: sh
+      run: echo "Cache already exists for key ${{ inputs.cache-name }}|${{ github.ref_name }}; skipping save."
