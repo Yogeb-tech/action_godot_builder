@@ -87,7 +87,7 @@ jobs:
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
         with:
-          cache-name: ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
+            cache-name: v2-ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Setup Python and SCons
@@ -149,7 +149,7 @@ jobs:
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
         with:
-          cache-name: ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
+            cache-name: v2-ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Build .NET solutions
