@@ -63,7 +63,6 @@ jobs:
         include:
           - name: Editor (target=editor arch=x86_64)
             target: editor
-            arch: x86_64
             scons-flags: arch=x86_64
             scons-mono-flags: ""
             build-mono: false
@@ -72,13 +71,11 @@ jobs:
           # TODO re-enable these
           - name: Editor (target=editor arch=x86_32)
             target: editor
-            arch: x86_32
             scons-flags: arch=x86_32
             legacy-scons: false
 
           - name: Template (target=template_release, arch=x86_64)
             target: template_release
-            arch: x86_64
             scons-flags: arch=x86_64
             scons-mono-flags: ""
             build-mono: false
@@ -86,7 +83,6 @@ jobs:
 
           - name: Template (target=template_debug, arch=x86_64)
             target: template_debug
-            arch: x86_64
             scons-flags: arch=x86_64
             scons-mono-flags: ""
             build-mono: false
@@ -94,7 +90,6 @@ jobs:
 
           - name: Editor Mono (target=editor arch=x86_64)
             target: editor
-            arch: x86_64
             scons-flags: arch=x86_64
             scons-mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
             build-mono: true
@@ -102,7 +97,6 @@ jobs:
 
           - name: Template Mono (target=template_release arch=x86_64)
             target: template_release
-            arch: x86_64
             scons-flags: arch=x86_64
             scons-mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
             build-mono: true
@@ -110,7 +104,6 @@ jobs:
 
           - name: Template Mono (target=template_debug arch=x86_64)
             target: template_debug
-            arch: x86_64
             scons-flags: arch=x86_64
             scons-mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
             build-mono: true
@@ -125,7 +118,7 @@ jobs:
           submodules: recursive
 
       - name: Setup Node.js 24 (for tools/actions)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: '24'
 
@@ -135,7 +128,7 @@ jobs:
           sudo apt-get install libwayland-bin  # TODO: Figure out somehow how to embed this one.
 
       - name: Download pre-built AccessKit
-        uses: dsaltares/fetch-gh-release-asset@v2
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: AccessKit/accesskit-c
           version: tags/0.18.0
@@ -172,7 +165,7 @@ jobs:
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
         with:
-          cache-name: v2-${{ matrix.target }}-${{ matrix.arch }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
+          cache-name: linux-${{ matrix.target }}-${{ matrix.scons-flags }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
         continue-on-error: true
 
       - name: Setup Python and SCons
@@ -236,7 +229,7 @@ jobs:
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
         with:
-          cache-name: v2-${{ matrix.target }}-${{ matrix.arch }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
+          cache-name: linux-${{ matrix.target }}-${{ matrix.scons-flags }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
         continue-on-error: true
 
       - name: Prepare artifact
