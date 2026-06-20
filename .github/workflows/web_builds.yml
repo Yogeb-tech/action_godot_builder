@@ -99,6 +99,11 @@ jobs:
           ref: ${{ inputs.tag }}
           submodules: recursive
 
+      - name: Setup Node.js 24 (for tools/actions)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: Set up Emscripten latest
         uses: mymindstorm/setup-emsdk@v14
         with:
@@ -141,7 +146,6 @@ jobs:
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: web-${{ matrix.target }}-${{ matrix.scons-flags }}-${{ inputs.lto }}
-          purge-cache-script: builder_repo/misc/scripts/purge_cache.py
         continue-on-error: true
 
       - name: Upload artifact

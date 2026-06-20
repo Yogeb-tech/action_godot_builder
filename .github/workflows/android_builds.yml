@@ -85,6 +85,11 @@ jobs:
           ref: ${{ inputs.tag }}
           submodules: recursive
 
+      - name: Setup Node.js 24 (for tools/actions)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
@@ -204,7 +209,6 @@ jobs:
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: android-${{ matrix.target }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
-          purge-cache-script: builder_repo/misc/scripts/purge_cache.py
         continue-on-error: true
 
       - name: Build .NET solutions

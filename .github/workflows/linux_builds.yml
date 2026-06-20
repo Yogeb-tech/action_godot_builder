@@ -117,6 +117,11 @@ jobs:
           ref: ${{ inputs.tag }}
           submodules: recursive
 
+      - name: Setup Node.js 24 (for tools/actions)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: Setup dependencies
         run: |
           sudo apt-get update
@@ -225,7 +230,6 @@ jobs:
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: linux-${{ matrix.target }}-${{ matrix.scons-flags }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
-          purge-cache-script: builder_repo/misc/scripts/purge_cache.py
         continue-on-error: true
 
       - name: Prepare artifact

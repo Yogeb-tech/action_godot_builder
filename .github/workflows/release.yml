@@ -107,6 +107,11 @@ jobs:
           ref: ${{ inputs.tag }}
           submodules: recursive
 
+      - name: Setup Node.js 24 (for tools/actions)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - uses: actions/download-artifact@v8
         with:
           path: bin

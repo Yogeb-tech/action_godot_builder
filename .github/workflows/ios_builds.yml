@@ -72,6 +72,11 @@ jobs:
           ref: ${{ inputs.tag }}
           submodules: recursive
 
+      - name: Setup Node.js 24 (for tools/actions)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: Checkout builder scripts (Vulkan SDK)
         uses: actions/checkout@v6
         with:
@@ -91,7 +96,17 @@ jobs:
       - name: Install Mono toolchain
         if: matrix.build-mono
         run: |
-          brew list mono || brew install mono
+          if ! command -v brew >/dev/null 2>&1; then
+            echo "Homebrew not found on runner — aborting install"
+            exit 1
+          fi
+          brew update --quiet || true
+          brew tap aws/tap || true
+          brew tap azure/bicep || true
+          if ! brew list mono >/dev/null 2>&1; then
+            echo "Installing mono..."
+            brew install mono
+          fi
 
       - name: Setup .NET SDK
         if: matrix.build-mono
@@ -135,7 +150,6 @@ jobs:
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
-          purge-cache-script: builder_repo/misc/scripts/purge_cache.py
         continue-on-error: true
 
       - name: Build .NET solutions
