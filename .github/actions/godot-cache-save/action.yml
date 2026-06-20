@@ -15,6 +15,17 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Ensure purge timestamp is set
+      shell: sh
+      run: |
+        if [ -z "$CACHE_TIMESTAMP" ]; then
+          FALLBACK_TIME=$(($(date +%s) - 3600))
+          echo "CACHE_TIMESTAMP=$FALLBACK_TIME" >> $GITHUB_ENV
+          echo "CACHE_TIMESTAMP was empty — using fallback (1 hour ago)"
+        else
+          echo "Using existing CACHE_TIMESTAMP: $CACHE_TIMESTAMP"
+        fi
+      
     - name: Purge files before timestamp
       shell: sh
       run: python3 ${{ inputs.purge-cache-script }} ${{ env.CACHE_TIMESTAMP }} "${{ inputs.scons-cache }}"
