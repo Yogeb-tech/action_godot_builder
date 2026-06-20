@@ -61,72 +61,84 @@ jobs:
         include:
           - name: Editor (target=editor, arch=x86_64)
             target: editor
+            arch: x86_64
             scons-flags: arch=x86_64
             build-mono: false
             mono-flags: ''
 
           - name: Editor (target=editor, arch=arm64)
             target: editor
+            arch: arm64
             scons-flags: arch=arm64
             build-mono: false
             mono-flags: ''
 
           - name: Template (target=template_release, arch=x86_64)
             target: template_release
+            arch: x86_64
             scons-flags: arch=x86_64
             build-mono: false
             mono-flags: ''
           
           - name: Template (target=template_release, arch=x86)
             target: template_release
+            arch: x86
             scons-flags: arch=x86
             build-mono: false
             mono-flags: ''
           
           - name: Template (target=template_release, arch=arm64)
             target: template_release
+            arch: arm64
             scons-flags: arch=arm64
             build-mono: false
             mono-flags: ''
           
           - name: Template (target=template_debug, arch=x86_64)
             target: template_debug
+            arch: x86_64
             scons-flags: arch=x86_64
             build-mono: false
             mono-flags: ''
           
           - name: Template (target=template_debug, arch=x86)
             target: template_debug
+            arch: x86
             scons-flags: arch=x86
             build-mono: false
             mono-flags: ''
           
           - name: Template (target=template_debug, arch=arm64)
             target: template_debug
+            arch: arm64
             scons-flags: arch=arm64
             build-mono: false
             mono-flags: ''
 
           - name: Editor Mono (target=editor, arch=x86_64)
             target: editor
+            arch: x86_64
             scons-flags: arch=x86_64
             build-mono: true
             mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
 
           - name: Template Mono (target=template_release, arch=x86_64)
             target: template_release
+            arch: x86_64
             scons-flags: arch=x86_64
             build-mono: true
             mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
 
           - name: Template Mono (target=template_debug, arch=x86_64)
             target: template_debug
+            arch: x86_64
             scons-flags: arch=x86_64
             build-mono: true
             mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
 
           - name: Editor Mono (target=editor, arch=arm64)
             target: editor
+            arch: arm64
             scons-flags: arch=arm64
             build-mono: true
             mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
@@ -152,14 +164,14 @@ jobs:
           submodules: recursive
 
       - name: Setup Node.js 24 (for tools/actions)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
 
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
         with:
-          cache-name: windows-${{ matrix.target }}${{ matrix.mono-flags }}-${{ matrix.scons-flags }}-${{ inputs.lto }}
+          cache-name: v2-${{ matrix.target }}-${{ matrix.arch }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Setup Python and SCons
@@ -181,7 +193,7 @@ jobs:
 
       - name: Download pre-built ANGLE static libraries (x86_64)
         if: matrix.scons-flags == 'arch=x86_64'
-        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        uses: dsaltares/fetch-gh-release-asset@v2
         with:
           repo: godotengine/godot-angle-static
           version: tags/chromium/6601.2
@@ -194,7 +206,7 @@ jobs:
 
       - name: Download pre-built ANGLE static libraries (x86_32)
         if: matrix.scons-flags == 'arch=x86'
-        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        uses: dsaltares/fetch-gh-release-asset@v2
         with:
           repo: godotengine/godot-angle-static
           version: tags/chromium/6601.2
@@ -207,7 +219,7 @@ jobs:
 
       - name: Download pre-built ANGLE static libraries (arm64)
         if: matrix.scons-flags == 'arch=arm64'
-        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        uses: dsaltares/fetch-gh-release-asset@v2
         with:
           repo: godotengine/godot-angle-static
           version: tags/chromium/6601.2
@@ -219,7 +231,7 @@ jobs:
         run: Expand-Archive -Force angle/angle_arm64.zip ${{ github.workspace }}/
 
       - name: Download pre-built AccessKit
-        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        uses: dsaltares/fetch-gh-release-asset@v2
         with:
           repo: AccessKit/accesskit-c
           version: tags/0.18.0
@@ -279,7 +291,7 @@ jobs:
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
         with:
-          cache-name: windows-${{ matrix.target }}${{ matrix.mono-flags }}-${{ matrix.scons-flags }}-${{ inputs.lto }}
+          cache-name: v2-${{ matrix.target }}-${{ matrix.arch }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Build .NET solutions

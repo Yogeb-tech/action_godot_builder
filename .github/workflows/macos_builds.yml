@@ -95,7 +95,7 @@ jobs:
           submodules: recursive
 
       - name: Setup Node.js 24 (for tools/actions)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
 
@@ -110,7 +110,7 @@ jobs:
           fetch-depth: 1
 
       - name: Download pre-built AccessKit
-        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        uses: dsaltares/fetch-gh-release-asset@v2
         with:
           repo: AccessKit/accesskit-c
           version: tags/0.18.0

@@ -15,6 +15,16 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Ensure CACHE_TIMESTAMP
+      shell: sh
+      run: |
+        if [ -z "${CACHE_TIMESTAMP}" ]; then
+          echo "CACHE_TIMESTAMP empty — setting to 1 hour ago"
+          echo "CACHE_TIMESTAMP=$(python3 -c 'import time; print(int(time.time())-3600)')" >> $GITHUB_ENV
+        else
+          echo "CACHE_TIMESTAMP exists: $CACHE_TIMESTAMP"
+        fi
+
     - name: Purge files before timestamp
       shell: sh
       run: python3 ${{ inputs.purge-cache-script }} ${{ env.CACHE_TIMESTAMP }} "${{ inputs.scons-cache }}"
