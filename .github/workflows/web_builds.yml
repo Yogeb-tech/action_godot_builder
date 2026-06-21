@@ -19,7 +19,7 @@ on:
         description: "Extra module flags, e.g. module_webm_enabled=no"
         type: string
       template_module_flags:
-        description: "Extra module flags for template build, e.g. module_webm_enabled=no"
+        description: "Extra module flags for template build, e.g. threads=no"
         type: string
       encryption_key:
         description: "Optional encryption key to apply to template builds"
@@ -60,37 +60,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Template w/ threads (target=template_release, threads=yes)
+          - name: Template (target=template_release)
             target: template_release
             scons-flags: threads=yes
 
-          - name: Template w/o threads (target=template_release, threads=no)
-            target: template_release
-            scons-flags: threads=no
-
-          - name: Template w/ threads (target=template_debug, threads=yes)
+          - name: Template (target=template_debug)
             target: template_debug
             scons-flags: threads=yes
 
-          - name: Template w/o threads (target=template_debug, threads=no)
-            target: template_debug
-            scons-flags: threads=no
-
-          - name: Template w/ threads (target=template_release, threads=yes dlink_enabled=yes)
+          - name: Template (target=template_release, dlink_enabled=yes)
             target: template_release
             scons-flags: threads=yes dlink_enabled=yes
 
-          - name: Template w/o threads (target=template_release, threads=no dlink_enabled=yes)
-            target: template_release
-            scons-flags: threads=no dlink_enabled=yes
-
-          - name: Template w/ threads (target=template_debug, threads=yes dlink_enabled=yes)
+          - name: Template (target=template_debug, dlink_enabled=yes)
             target: template_debug
             scons-flags: threads=yes dlink_enabled=yes
-
-          - name: Template w/o threads (target=template_debug, threads=no dlink_enabled=yes)
-            target: template_debug
-            scons-flags: threads=no dlink_enabled=yes
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -131,6 +115,7 @@ jobs:
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
+          # Inputs.template_module_flags is placed at the end so it overrides previous flags
           scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }}
           platform: web
           target: ${{ matrix.target }}
