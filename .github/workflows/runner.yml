@@ -1,4 +1,5 @@
 name: 🔗 GHA
+run-name: Godot Build - ${{ inputs.request_id }}
 on:
   workflow_dispatch:
     inputs:
