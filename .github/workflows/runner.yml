@@ -6,6 +6,7 @@ on:
       request_id:
         description: "Unique ID for this request"
         type: string
+        required: true
         default: ""
       repo:
         description: "Repository to use for the build"
