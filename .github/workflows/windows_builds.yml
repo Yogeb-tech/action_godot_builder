@@ -41,107 +41,61 @@ on:
         type: boolean
         default: false
 
-# Global Settings
-# SCONS_CACHE for windows must be set in the build environment
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
   SCONSFLAGS: verbose=yes warnings=extra d3d12=yes strict_checks=yes debug_symbols=no ${{ inputs.module_flags }} use_static_cpp=yes "angle_libs=${{ github.workspace }}/" "accesskit_sdk_path=${{ github.workspace }}/accesskit-c-0.18.0/"
   SCONS_CACHE_MSVC_CONFIG: true
 
 jobs:
   build-windows:
-    # Windows 10 with latest image
     runs-on: windows-latest
     name: ${{ matrix.name }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: Editor (target=editor, arch=x86_64)
+          - name: Template release (x86_64)
+            target: template_release
+            scons-flags: arch=x86_64
+            build-mono: false
+            mono-flags: ''
+            if: inputs.run_template
+
+          - name: Template debug (x86_64)
+            target: template_debug
+            scons-flags: arch=x86_64
+            build-mono: false
+            mono-flags: ''
+            if: inputs.run_template
+
+          - name: Template release Mono (x86_64)
+            target: template_release
+            scons-flags: arch=x86_64
+            build-mono: true
+            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
+            if: inputs.run_template_mono
+
+          - name: Template debug Mono (x86_64)
+            target: template_debug
+            scons-flags: arch=x86_64
+            build-mono: true
+            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
+            if: inputs.run_template_mono
+
+          - name: Editor (x86_64)
             target: editor
             scons-flags: arch=x86_64
             build-mono: false
             mono-flags: ''
+            if: inputs.run_editor
 
-          - name: Editor (target=editor, arch=arm64)
-            target: editor
-            scons-flags: arch=arm64
-            build-mono: false
-            mono-flags: ''
-
-          - name: Template (target=template_release, arch=x86_64)
-            target: template_release
-            scons-flags: arch=x86_64
-            build-mono: false
-            mono-flags: ''
-          
-          - name: Template (target=template_release, arch=x86)
-            target: template_release
-            scons-flags: arch=x86
-            build-mono: false
-            mono-flags: ''
-          
-          - name: Template (target=template_release, arch=arm64)
-            target: template_release
-            scons-flags: arch=arm64
-            build-mono: false
-            mono-flags: ''
-          
-          - name: Template (target=template_debug, arch=x86_64)
-            target: template_debug
-            scons-flags: arch=x86_64
-            build-mono: false
-            mono-flags: ''
-          
-          - name: Template (target=template_debug, arch=x86)
-            target: template_debug
-            scons-flags: arch=x86
-            build-mono: false
-            mono-flags: ''
-          
-          - name: Template (target=template_debug, arch=arm64)
-            target: template_debug
-            scons-flags: arch=arm64
-            build-mono: false
-            mono-flags: ''
-
-          - name: Editor Mono (target=editor, arch=x86_64)
+          - name: Editor Mono (x86_64)
             target: editor
             scons-flags: arch=x86_64
             build-mono: true
             mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Template Mono (target=template_release, arch=x86_64)
-            target: template_release
-            scons-flags: arch=x86_64
-            build-mono: true
-            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Template Mono (target=template_debug, arch=x86_64)
-            target: template_debug
-            scons-flags: arch=x86_64
-            build-mono: true
-            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Editor Mono (target=editor, arch=arm64)
-            target: editor
-            scons-flags: arch=arm64
-            build-mono: true
-            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Template Mono (target=template_release, arch=arm64)
-            target: template_release
-            scons-flags: arch=arm64
-            build-mono: true
-            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Template Mono (target=template_debug, arch=arm64)
-            target: template_debug
-            scons-flags: arch=arm64
-            build-mono: true
-            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
+            if: inputs.run_editor_mono
 
     steps:
       - name: Checkout
@@ -178,6 +132,10 @@ jobs:
 
       - name: Download Direct3D 12 SDK components
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
+
+      - name: Set D3D12 SDK path
+        run: echo "D3D12_SDK_PATH=$env:LOCALAPPDATA\Godot\build_deps" >> $env:GITHUB_ENV
+        shell: pwsh
 
       - name: Download pre-built ANGLE static libraries (x86_64)
         if: matrix.scons-flags == 'arch=x86_64'
@@ -229,7 +187,7 @@ jobs:
       - name: Extract pre-built AccessKit
         run: unzip -o accesskit-c-0.18.0/accesskit_c.zip
 
-# Mono
+      # Mono prerequisites
       - name: Setup .NET SDK
         if: matrix.build-mono
         uses: actions/setup-dotnet@v5
@@ -249,11 +207,12 @@ jobs:
         run: |
           .\bin\godot.windows.editor.x86_64.mono.exe --headless --generate-mono-glue .\modules\mono\glue
 
-# Compilation
-
+      # Compilation
       - name: Compilation (editor)
         if: ${{ matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true)) }}
         uses: ./.github/actions/godot-build
+        env:
+          D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.mono-flags }}
           platform: windows
@@ -263,6 +222,7 @@ jobs:
         if: ${{ matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
         uses: ./.github/actions/godot-build
         env:
+          D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }}
