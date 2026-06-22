@@ -19,6 +19,18 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Map inputs to intermediate env vars and validate
+      env:
+        SCONS_CACHE_INPUT: ${{ inputs.scons-cache }}
+      shell: sh
+      run: |
+        # Basic validation: reject suspicious shell metacharacters
+        if echo "$SCONS_CACHE_INPUT" | grep -Eq '[;&|<>`$]'; then
+          echo "scons-cache contains unsafe characters" >&2
+          exit 1
+        fi
+        echo "SCONS_CACHE=$SCONS_CACHE_INPUT" >> $GITHUB_ENV
+
     - name: Restore default cache
       uses: actions/cache/restore@v5
       id: cache-ping
@@ -30,7 +42,7 @@ runs:
     - name: Log default cache files
       if: steps.cache-ping.outputs.cache-matched-key && github.ref_name != github.event.repository.default_branch
       shell: sh
-      run: find "${{ inputs.scons-cache }}" >> redundant.txt
+      run: find "${SCONS_CACHE}" >> redundant.txt
 
     - name: Restore local cache
       uses: actions/cache/restore@v5

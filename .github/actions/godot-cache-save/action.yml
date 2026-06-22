@@ -15,6 +15,20 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Map inputs to intermediate env vars and validate
+      env:
+        PURGE_CACHE_SCRIPT_INPUT: ${{ inputs.purge-cache-script }}
+        SCONS_CACHE_INPUT: ${{ inputs.scons-cache }}
+      shell: sh
+      run: |
+        # Validation: ensure purge script path is repo-relative and doesn't include .. or strange chars
+        if ! echo "$PURGE_CACHE_SCRIPT_INPUT" | grep -Eq '^[A-Za-z0-9_./\\-]+$'; then
+          echo "Invalid purge-cache-script path: $PURGE_CACHE_SCRIPT_INPUT" >&2
+          exit 1
+        fi
+        echo "PURGE_CACHE_SCRIPT=$PURGE_CACHE_SCRIPT_INPUT" >> $GITHUB_ENV
+        echo "SCONS_CACHE=$SCONS_CACHE_INPUT" >> $GITHUB_ENV
+
     - name: Ensure purge timestamp is set
       shell: sh
       run: |
@@ -25,10 +39,10 @@ runs:
         else
           echo "Using existing CACHE_TIMESTAMP: $CACHE_TIMESTAMP"
         fi
-      
+
     - name: Purge files before timestamp
       shell: sh
-      run: python3 ${{ inputs.purge-cache-script }} ${{ env.CACHE_TIMESTAMP }} "${{ inputs.scons-cache }}"
+      run: python3 "$PURGE_CACHE_SCRIPT" "$CACHE_TIMESTAMP" "$SCONS_CACHE"
 
     - name: Check existing cache (lookup only)
       uses: actions/cache/restore@v5

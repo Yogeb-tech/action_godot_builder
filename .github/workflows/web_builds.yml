@@ -107,8 +107,21 @@ jobs:
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
 
+      - name: Map encryption key to step env and validate
+        if: ${{ inputs.encryption_key != '' }}
+        env:
+          ENCRYPTION_KEY_INPUT: ${{ inputs.encryption_key }}
+        shell: sh
+        run: |
+          if echo "$ENCRYPTION_KEY_INPUT" | grep -Eq '[;&|<>`$]'; then
+            echo 'encryption_key contains unsafe characters' >&2
+            exit 1
+          fi
+          echo "ENCRYPTION_KEY=$ENCRYPTION_KEY_INPUT" >> $GITHUB_ENV
+
       - name: Mask encryption key
-        run: echo "::add-mask::${{ inputs.encryption_key }}"
+        run: echo "::add-mask::$ENCRYPTION_KEY"
+        shell: sh
 
       - name: Compilation
         uses: ./.github/actions/godot-build

@@ -119,15 +119,18 @@ jobs:
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
 
+      - name: Map encryption key to step env and validate
+        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
+        env:
+          ENCRYPTION_KEY_INPUT: ${{ inputs.encryption_key }}
+        shell: pwsh
+        run: |
+          if ($ENCRYPTION_KEY_INPUT -match '[;&|<>`$]') { Write-Error "encryption_key contains unsafe characters"; exit 1 }
+          Add-Content -Path $env:GITHUB_ENV -Value "ENCRYPTION_KEY=$ENCRYPTION_KEY_INPUT"
+
       - name: Mask encryption key
         if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
-        run: Write-Host "::add-mask::${{ inputs.encryption_key }}"
-        shell: pwsh
-
-      - name: Export encryption key for template builds
-        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
-        run: |
-          Add-Content -Path $env:GITHUB_ENV -Value "ENCRYPTION_KEY=${{ inputs.encryption_key }}"
+        run: Write-Host "::add-mask::$env:ENCRYPTION_KEY"
         shell: pwsh
 
       - name: Download Direct3D 12 SDK components

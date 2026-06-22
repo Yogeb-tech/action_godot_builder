@@ -105,13 +105,22 @@ jobs:
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
 
+      - name: Map encryption key to step env and validate
+        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
+        env:
+          ENCRYPTION_KEY_INPUT: ${{ inputs.encryption_key }}
+        shell: sh
+        run: |
+          if echo "$ENCRYPTION_KEY_INPUT" | grep -Eq '[;&|<>`$]'; then
+            echo 'encryption_key contains unsafe characters' >&2
+            exit 1
+          fi
+          echo "ENCRYPTION_KEY=$ENCRYPTION_KEY_INPUT" >> $GITHUB_ENV
+
       - name: Mask encryption key
         if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
-        run: echo "::add-mask::${{ inputs.encryption_key }}"
-
-      - name: Export encryption key for template builds
-        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
-        run: echo "ENCRYPTION_KEY=${{ inputs.encryption_key }}" >> $GITHUB_ENV
+        run: echo "::add-mask::$ENCRYPTION_KEY"
+        shell: sh
 
       - name: Install Mono toolchain
         if: matrix.build-mono

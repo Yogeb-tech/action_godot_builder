@@ -15,6 +15,18 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Map inputs to intermediate env vars and validate
+      env:
+        SCONS_VERSION_INPUT: ${{ inputs.scons-version }}
+      shell: bash
+      run: |
+        # Validate scons version and export to GITHUB_ENV without directly interpolating inputs in the script
+        if ! echo "$SCONS_VERSION_INPUT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+'; then
+          echo "Invalid scons-version: $SCONS_VERSION_INPUT" >&2
+          exit 1
+        fi
+        echo "SCONS_VERSION=$SCONS_VERSION_INPUT" >> $GITHUB_ENV
+
     - name: Set up Python 3.x
       uses: actions/setup-python@v6
       with:
@@ -27,7 +39,7 @@ runs:
       shell: bash
       run: |
         python -c "import sys; print(sys.version)"
-        python -m pip install scons==${{ inputs.scons-version }}
+        python -m pip install "scons==${SCONS_VERSION}"
         scons --version
 
     - name: Setup problem matchers

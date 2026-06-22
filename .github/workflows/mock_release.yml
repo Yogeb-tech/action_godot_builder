@@ -65,17 +65,45 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Map inputs to step env and validate
+        env:
+          BASE_BRANCH_INPUT: ${{ inputs.base-branch }}
+          LTO_INPUT: ${{ inputs.lto }}
+          REPO_INPUT: ${{ inputs.repo }}
+          RELEASE_REPO_INPUT: ${{ inputs.release_repo }}
+          TAG_INPUT: ${{ inputs.tag }}
+          TAG_RELEASE_INPUT: ${{ inputs.tag_release }}
+          MODULE_FLAGS_INPUT: ${{ inputs.module_flags }}
+          TEMPLATE_MODULE_FLAGS_INPUT: ${{ inputs.template_module_flags }}
+        shell: sh
+        run: |
+          # Flexible validation for template_module_flags: allow common safe chars but reject shell metacharacters
+          if ! echo "$TEMPLATE_MODULE_FLAGS_INPUT" | grep -Eq '^[A-Za-z0-9_ =,./:+-]*$'; then
+            echo "template_module_flags contains invalid characters" >&2
+            exit 1
+          fi
+
+          # Export validated values to GITHUB_ENV for later steps
+          echo "BASE_BRANCH=$BASE_BRANCH_INPUT" >> $GITHUB_ENV
+          echo "LTO=$LTO_INPUT" >> $GITHUB_ENV
+          echo "REPO=$REPO_INPUT" >> $GITHUB_ENV
+          echo "RELEASE_REPO=$RELEASE_REPO_INPUT" >> $GITHUB_ENV
+          echo "TAG=$TAG_INPUT" >> $GITHUB_ENV
+          echo "TAG_RELEASE=$TAG_RELEASE_INPUT" >> $GITHUB_ENV
+          echo "MODULE_FLAGS=$MODULE_FLAGS_INPUT" >> $GITHUB_ENV
+          echo "TEMPLATE_MODULE_FLAGS=$TEMPLATE_MODULE_FLAGS_INPUT" >> $GITHUB_ENV
+
       - name: Print inputs and flags
         run: |
           {
-          echo "base-branch: '${{ inputs.base-branch }}'"
-            echo "lto: '${{ inputs.lto }}'"
-            echo "repo: '${{ inputs.repo }}'"
-            echo "release_repo: '${{ inputs.release_repo }}'"
-            echo "tag: '${{ inputs.tag }}'"
-            echo "tag_release: '${{ inputs.tag_release }}'"
-            echo "module_flags: '${{ inputs.module_flags }}'"
-            echo "template_module_flags: '${{ inputs.template_module_flags }}'"
+          echo "base-branch: '$BASE_BRANCH'"
+            echo "lto: '$LTO'"
+            echo "repo: '$REPO'"
+            echo "release_repo: '$RELEASE_REPO'"
+            echo "tag: '$TAG'"
+            echo "tag_release: '$TAG_RELEASE'"
+            echo "module_flags: '$MODULE_FLAGS'"
+            echo "template_module_flags: '$TEMPLATE_MODULE_FLAGS'"
             echo "encryption-key: '[MASKED]'"
 
             echo ""
@@ -85,10 +113,10 @@ jobs:
 
       - name: Create build artifact
         run: |
-          echo "Build info for tag: ${{ inputs.tag_release }}" > build_info.txt
-          echo "LTO mode: ${{ inputs.lto }}" >> build_info.txt
-          echo "Module flags: ${{ inputs.module_flags }}" >> build_info.txt
-          echo "Template flags: ${{ inputs.template_module_flags }}" >> build_info.txt
+          echo "Build info for tag: $TAG_RELEASE" > build_info.txt
+          echo "LTO mode: $LTO" >> build_info.txt
+          echo "Module flags: $MODULE_FLAGS" >> build_info.txt
+          echo "Template flags: $TEMPLATE_MODULE_FLAGS" >> build_info.txt
           echo "Created on: $(date)" >> build_info.txt
           
           mkdir -p build_output
@@ -96,7 +124,7 @@ jobs:
           cp build_info.txt build_output/
           echo "This is a simulated build output" > build_output/readme.txt
           
-          zip -r godot_build_${{ inputs.tag_release }}.zip build_output/
+          zip -r godot_build_$TAG_RELEASE.zip build_output/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

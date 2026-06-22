@@ -21,22 +21,53 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Map inputs to intermediate env vars and validate
+      env:
+        PLATFORM_INPUT: ${{ inputs.platform }}
+        TARGET_INPUT: ${{ inputs.target }}
+        SCONS_FLAGS_INPUT: ${{ inputs.scons-flags }}
+        SCONS_CACHE_INPUT: ${{ inputs.scons-cache }}
+        PR_NUMBER_INPUT: ${{ github.event.number }}
+      shell: sh
+      run: |
+        # Validation: ensure simple safe character sets (no shell metacharacters)
+        bad='[;&|<>`$\\]'
+        if echo "$SCONS_FLAGS_INPUT" | grep -Eq "$bad"; then
+          echo "scons-flags contains unsafe characters" >&2
+          exit 1
+        fi
+        if echo "$PLATFORM_INPUT" | grep -Eq "$bad"; then
+          echo "platform contains unsafe characters" >&2
+          exit 1
+        fi
+        if echo "$TARGET_INPUT" | grep -Eq "$bad"; then
+          echo "target contains unsafe characters" >&2
+          exit 1
+        fi
+
+        # Export validated values to GITHUB_ENV for later run steps
+        echo "PLATFORM=$PLATFORM_INPUT" >> $GITHUB_ENV
+        echo "TARGET=$TARGET_INPUT" >> $GITHUB_ENV
+        echo "SCONS_FLAGS=$SCONS_FLAGS_INPUT" >> $GITHUB_ENV
+        echo "SCONS_CACHE=$SCONS_CACHE_INPUT" >> $GITHUB_ENV
+        echo "PR_NUMBER=$PR_NUMBER_INPUT" >> $GITHUB_ENV
+
     - name: SCons Build
       shell: sh
       run: |
-        echo "Building with flags:" platform=${{ inputs.platform }} target=${{ inputs.target }} ${{ inputs.scons-flags }} "cache_path=${{ inputs.scons-cache }}" redirect_build_objects=no
+        echo "Building with flags:" platform=$PLATFORM target=$TARGET "$SCONS_FLAGS" "cache_path=$SCONS_CACHE" redirect_build_objects=no
 
-        if [ "${{ inputs.target }}" != "editor" ]; then
+        if [ "$TARGET" != "editor" ]; then
           # Ensure we don't include editor code in export template builds.
           rm -rf editor
         fi
 
-        if [ "${{ github.event.number }}" != "" ]; then
+        if [ "$PR_NUMBER" != "" ]; then
           # Set build identifier with pull request number if available. This is displayed throughout the editor.
-          export BUILD_NAME="gh-${{ github.event.number }}"
+          export BUILD_NAME="gh-$PR_NUMBER"
         else
           export BUILD_NAME="gh"
         fi
 
-        scons platform=${{ inputs.platform }} target=${{ inputs.target }} ${{ inputs.scons-flags }} "cache_path=${{ inputs.scons-cache }}" redirect_build_objects=no
+        scons platform=$PLATFORM target=$TARGET $SCONS_FLAGS "cache_path=$SCONS_CACHE" redirect_build_objects=no
         ls -l bin/
