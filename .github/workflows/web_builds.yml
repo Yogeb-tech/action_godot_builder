@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-24.04
     name: ${{ matrix.name }}
     # Only run this job if template builds are requested (non-mono templates)
-    if: ${{ inputs.run_template == true }}
+    if: ${{ inputs.run_template == 'true' || inputs.run_template == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -149,5 +149,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: web-${{ matrix.target }}-${{ matrix.scons-flags }}-${{ inputs.lto }}
+          name: web-${{ matrix.target }}-${{ matrix.scons-flags }}-${{ inputs.lto }}${{ matrix.dlink_enabled && '-dlink' || '' }}
           path: bin

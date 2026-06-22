@@ -129,7 +129,7 @@ jobs:
         run: ./bin/godot.macos.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
 
       - name: Compilation Debug (arm64)
-        if: ${{ (matrix.build-mono == true && inputs.run_template_mono == true) || (matrix.build-mono != true && inputs.run_template == true) }}
+        if: ${{ (matrix.build-mono == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix.build-mono != true && (inputs.run_template == 'true' || inputs.run_template == true)) }}
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
@@ -137,7 +137,7 @@ jobs:
           target: template_debug
 
       - name: Compilation Release (arm64)
-        if: ${{ (matrix.build-mono == true && inputs.run_template_mono == true) || (matrix.build-mono != true && inputs.run_template == true) }}
+        if: ${{ (matrix.build-mono == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix.build-mono != true && (inputs.run_template == 'true' || inputs.run_template == true)) }}
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }} generate_bundle=yes
@@ -162,6 +162,7 @@ jobs:
           if [ -f bin/godot_ios.zip ]; then mv bin/godot_ios.zip bin/godot_ios_mono.zip; fi
 
       - name: Upload artifact
+        if: ${{ ((matrix.build-mono == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix.build-mono != true && (inputs.run_template == 'true' || inputs.run_template == true))) }}
         uses: actions/upload-artifact@v7
         with:
           name: ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}

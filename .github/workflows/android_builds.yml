@@ -106,7 +106,7 @@ jobs:
         uses: ./.github/actions/godot-deps
 
       - name: Map encryption key to step env and validate
-        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
+        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true))) }}
         env:
           ENCRYPTION_KEY_INPUT: ${{ inputs.encryption_key }}
         shell: sh
@@ -118,7 +118,7 @@ jobs:
           echo "ENCRYPTION_KEY=$ENCRYPTION_KEY_INPUT" >> $GITHUB_ENV
 
       - name: Mask encryption key
-        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true)) }}
+        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true))) }}
         run: echo "::add-mask::$ENCRYPTION_KEY"
         shell: sh
 
@@ -156,7 +156,7 @@ jobs:
         run: 7za x -y swappy/godot-swappy.7z -o${{github.workspace}}/thirdparty/swappy-frame-pacing
 
       - name: Mono tools build (pre-glue)
-        if: ${{ matrix.build-mono && ((matrix.target == 'editor' && inputs.run_editor_mono == true) || (matrix.target != 'editor' && inputs.run_template_mono == true)) }}
+        if: ${{ matrix.build-mono && ((matrix.target == 'editor' && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix.target != 'editor' && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true))) }}
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} module_mono_enabled=yes mono_glue=no ${{ inputs.module_flags }}
@@ -164,11 +164,11 @@ jobs:
           target: editor
 
       - name: Generate C# glue
-        if: ${{ matrix.build-mono && ((matrix.target == 'editor' && inputs.run_editor_mono == true) || (matrix.target != 'editor' && inputs.run_template_mono == true)) }}
+        if: ${{ matrix.build-mono && ((matrix.target == 'editor' && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix.target != 'editor' && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true))) }}
         run: ./bin/godot.linuxbsd.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
 
       - name: Compilation x86_64
-        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
+        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true)))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
         uses: ./.github/actions/godot-build
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
@@ -178,7 +178,7 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Compilation x86
-        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
+        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true)))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
         uses: ./.github/actions/godot-build
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
@@ -188,7 +188,7 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Compilation arm64
-        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
+        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true)))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
         uses: ./.github/actions/godot-build
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
@@ -198,7 +198,7 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Compilation arm32
-        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && inputs.run_editor_mono == true) || (matrix['build-mono'] != true && inputs.run_editor == true))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && inputs.run_template_mono == true) || (matrix['build-mono'] != true && inputs.run_template == true))) }}
+        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true)))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
         uses: ./.github/actions/godot-build
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
@@ -263,6 +263,7 @@ jobs:
           fi
 
       - name: Upload artifact
+        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true)))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
         uses: actions/upload-artifact@v7
         with:
           name: android-${{ matrix.target }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
