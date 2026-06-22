@@ -49,52 +49,54 @@ jobs:
             scons-flags: arch=x86_64
             build-mono: false
             mono-flags: ""
-            build_type: "template"
+            should_run: ${{ inputs.run_template }}
 
           - name: Template debug (x86_64)
             target: template_debug
             scons-flags: arch=x86_64
             build-mono: false
             mono-flags: ""
-            build_type: "template"
+            should_run: ${{ inputs.run_template }}
 
           - name: Template release Mono (x86_64)
             target: template_release
             scons-flags: arch=x86_64
             build-mono: true
             mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-            build_type: "template_mono"
+            should_run: ${{ inputs.run_template_mono }}
 
           - name: Template debug Mono (x86_64)
             target: template_debug
             scons-flags: arch=x86_64
             build-mono: true
             mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-            build_type: "template_mono"
+            should_run: ${{ inputs.run_template_mono }}
 
           - name: Editor (x86_64)
             target: editor
             scons-flags: arch=x86_64
             build-mono: false
             mono-flags: ""
-            build_type: "editor"
+            should_run: ${{ inputs.run_editor }}
 
           - name: Editor Mono (x86_64)
             target: editor
             scons-flags: arch=x86_64
             build-mono: true
             mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-            build_type: "editor_mono"
-
-        # 🎯 Dynamic Matrix Filtering
-        exclude:
-          - build_type: ${{ !inputs.run_template && 'template' || 'none' }}
-          - build_type: ${{ !inputs.run_template_mono && 'template_mono' || 'none' }}
-          - build_type: ${{ !inputs.run_editor && 'editor' || 'none' }}
-          - build_type: ${{ !inputs.run_editor_mono && 'editor_mono' || 'none' }}
+            should_run: ${{ inputs.run_editor_mono }}
 
     steps:
+      - name: Check if build target is enabled
+        if: matrix.should_run != true
+        shell: pwsh
+        run: |
+          Write-Host "This build target (${{ matrix.name }}) has been disabled via runner inputs."
+          Write-Host "Exiting step sequence cleanly without processing standard dependencies."
+          exit 0
+
       - name: Checkout
+        if: matrix.should_run == true
         uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repo }}
@@ -102,21 +104,24 @@ jobs:
           submodules: recursive
 
       - name: Setup Node.js 24 (for tools/actions)
+        if: matrix.should_run == true
         uses: actions/setup-node@v4
         with:
           node-version: "24"
 
       - name: Restore Godot build cache
+        if: matrix.should_run == true
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: windows-${{ matrix.target }}${{ matrix.mono-flags }}-${{ matrix.scons-flags }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Setup Python and SCons
+        if: matrix.should_run == true
         uses: ./.github/actions/godot-deps
 
       - name: Map encryption key to step env and validate
-        if: inputs.encryption_key != '' && matrix.target != 'editor'
+        if: matrix.should_run == true && inputs.encryption_key != '' && matrix.target != 'editor'
         env:
           ENCRYPTION_KEY_INPUT: ${{ inputs.encryption_key }}
         shell: pwsh
@@ -125,19 +130,21 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "ENCRYPTION_KEY=$ENCRYPTION_KEY_INPUT"
 
       - name: Mask encryption key
-        if: inputs.encryption_key != '' && matrix.target != 'editor'
+        if: matrix.should_run == true && inputs.encryption_key != '' && matrix.target != 'editor'
         run: Write-Host "::add-mask::$env:ENCRYPTION_KEY"
         shell: pwsh
 
       - name: Download Direct3D 12 SDK components
+        if: matrix.should_run == true
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
       - name: Set D3D12 SDK path
+        if: matrix.should_run == true
         run: echo "D3D12_SDK_PATH=$env:LOCALAPPDATA\Godot\build_deps" >> $env:GITHUB_ENV
         shell: pwsh
 
       - name: Download pre-built ANGLE static libraries (x86_64)
-        if: matrix.scons-flags == 'arch=x86_64'
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86_64'
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: godotengine/godot-angle-static
@@ -146,11 +153,11 @@ jobs:
           target: angle/angle_x86_64.zip
 
       - name: Extract pre-built ANGLE static libraries (x86_64)
-        if: matrix.scons-flags == 'arch=x86_64'
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86_64'
         run: Expand-Archive -Force angle/angle_x86_64.zip ${{ github.workspace }}/
 
       - name: Download pre-built ANGLE static libraries (x86_32)
-        if: matrix.scons-flags == 'arch=x86'
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86'
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: godotengine/godot-angle-static
@@ -159,11 +166,11 @@ jobs:
           target: angle/angle_x86_32.zip
 
       - name: Extract pre-built ANGLE static libraries (x86_32)
-        if: matrix.scons-flags == 'arch=x86'
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86'
         run: Expand-Archive -Force angle/angle_x86_32.zip ${{ github.workspace }}/
 
       - name: Download pre-built ANGLE static libraries (arm64)
-        if: matrix.scons-flags == 'arch=arm64'
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=arm64'
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: godotengine/godot-angle-static
@@ -172,10 +179,11 @@ jobs:
           target: angle/angle_arm64.zip
 
       - name: Extract pre-built ANGLE static libraries (arm64)
-        if: matrix.scons-flags == 'arch=arm64'
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=arm64'
         run: Expand-Archive -Force angle/angle_arm64.zip ${{ github.workspace }}/
 
       - name: Download pre-built AccessKit
+        if: matrix.should_run == true
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: AccessKit/accesskit-c
@@ -184,17 +192,18 @@ jobs:
           target: accesskit-c-0.18.0/accesskit_c.zip
 
       - name: Extract pre-built AccessKit
+        if: matrix.should_run == true
         run: unzip -o accesskit-c-0.18.0/accesskit_c.zip
 
       # Mono prerequisites
       - name: Setup .NET SDK
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "6.0.x"
 
       - name: Mono tools build (pre-glue)
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         uses: ./.github/actions/godot-build
         with:
           scons-flags: arch=x86_64 module_mono_enabled=yes mono_glue=no ${{ inputs.module_flags }}
@@ -202,13 +211,13 @@ jobs:
           target: editor
 
       - name: Generate C# glue
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         run: |
           .\bin\godot.windows.editor.x86_64.mono.exe --headless --generate-mono-glue .\modules\mono\glue
 
       # Compilation
       - name: Compilation (editor)
-        if: matrix.target == 'editor'
+        if: matrix.should_run == true && matrix.target == 'editor'
         uses: ./.github/actions/godot-build
         env:
           D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
@@ -218,7 +227,7 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Compilation (template)
-        if: matrix.target != 'editor'
+        if: matrix.should_run == true && matrix.target != 'editor'
         uses: ./.github/actions/godot-build
         env:
           D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
@@ -229,6 +238,7 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Checkout builder repo (cache purge script)
+        if: matrix.should_run == true
         uses: actions/checkout@v6
         with:
           repository: appsinacup/action_godot_builder
@@ -236,22 +246,25 @@ jobs:
           fetch-depth: 1
 
       - name: Save Godot build cache
+        if: matrix.should_run == true
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: windows-${{ matrix.target }}${{ matrix.mono-flags }}-${{ matrix.scons-flags }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Build .NET solutions
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         run: |
           dotnet --info
           ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=windows --werror
 
       - name: Prepare artifact
+        if: matrix.should_run == true
         run: |
           Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
 
       - name: Upload artifact
+        if: matrix.should_run == true
         uses: actions/upload-artifact@v7
         with:
           name: windows-${{ matrix.target }}${{ matrix.mono-flags }}-${{ matrix.scons-flags }}-${{ inputs.lto }}
