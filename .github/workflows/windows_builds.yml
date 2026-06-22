@@ -3,41 +3,30 @@ on:
   workflow_call:
     inputs:
       base-branch:
-        description: 'Base branch to use for the builds'
         type: string
       lto:
-        description: 'LTO mode. Options: "none", "thin", "full"'
         type: string
       repo:
-        description: 'Repository to use for the build'
         type: string
       tag:
-        description: 'tag to use for the build'
         type: string
       module_flags:
-        description: 'Extra module flags, e.g. module_webm_enabled=no'
         type: string
       template_module_flags:
-        description: 'Extra module flags for template build, e.g. module_webm_enabled=no'
         type: string
       encryption_key:
-        description: 'Optional encryption key to apply to template builds'
         type: string
-        default: ''
+        default: ""
       run_editor:
-        description: 'Run editor builds'
         type: boolean
         default: true
       run_editor_mono:
-        description: 'Run editor mono builds'
         type: boolean
         default: false
       run_template:
-        description: 'Run template builds'
         type: boolean
         default: true
       run_template_mono:
-        description: 'Run template mono builds'
         type: boolean
         default: false
 
@@ -59,43 +48,50 @@ jobs:
             target: template_release
             scons-flags: arch=x86_64
             build-mono: false
-            mono-flags: ''
-            if: inputs.run_template
+            mono-flags: ""
+            build_type: "template"
 
           - name: Template debug (x86_64)
             target: template_debug
             scons-flags: arch=x86_64
             build-mono: false
-            mono-flags: ''
-            if: inputs.run_template
+            mono-flags: ""
+            build_type: "template"
 
           - name: Template release Mono (x86_64)
             target: template_release
             scons-flags: arch=x86_64
             build-mono: true
             mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-            if: inputs.run_template_mono
+            build_type: "template_mono"
 
           - name: Template debug Mono (x86_64)
             target: template_debug
             scons-flags: arch=x86_64
             build-mono: true
             mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-            if: inputs.run_template_mono
+            build_type: "template_mono"
 
           - name: Editor (x86_64)
             target: editor
             scons-flags: arch=x86_64
             build-mono: false
-            mono-flags: ''
-            if: inputs.run_editor
+            mono-flags: ""
+            build_type: "editor"
 
           - name: Editor Mono (x86_64)
             target: editor
             scons-flags: arch=x86_64
             build-mono: true
             mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-            if: inputs.run_editor_mono
+            build_type: "editor_mono"
+
+        # 🎯 Dynamic Matrix Filtering
+        exclude:
+          - build_type: ${{ !inputs.run_template && 'template' || 'none' }}
+          - build_type: ${{ !inputs.run_template_mono && 'template_mono' || 'none' }}
+          - build_type: ${{ !inputs.run_editor && 'editor' || 'none' }}
+          - build_type: ${{ !inputs.run_editor_mono && 'editor_mono' || 'none' }}
 
     steps:
       - name: Checkout
@@ -108,7 +104,7 @@ jobs:
       - name: Setup Node.js 24 (for tools/actions)
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
 
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
@@ -120,7 +116,7 @@ jobs:
         uses: ./.github/actions/godot-deps
 
       - name: Map encryption key to step env and validate
-        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true))) }}
+        if: inputs.encryption_key != '' && matrix.target != 'editor'
         env:
           ENCRYPTION_KEY_INPUT: ${{ inputs.encryption_key }}
         shell: pwsh
@@ -129,7 +125,7 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "ENCRYPTION_KEY=$ENCRYPTION_KEY_INPUT"
 
       - name: Mask encryption key
-        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true))) }}
+        if: inputs.encryption_key != '' && matrix.target != 'editor'
         run: Write-Host "::add-mask::$env:ENCRYPTION_KEY"
         shell: pwsh
 
@@ -195,7 +191,7 @@ jobs:
         if: matrix.build-mono
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: "6.0.x"
 
       - name: Mono tools build (pre-glue)
         if: matrix.build-mono
@@ -212,7 +208,7 @@ jobs:
 
       # Compilation
       - name: Compilation (editor)
-        if: ${{ matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true))) }}
+        if: matrix.target == 'editor'
         uses: ./.github/actions/godot-build
         env:
           D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
@@ -222,7 +218,7 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Compilation (template)
-        if: ${{ matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true))) }}
+        if: matrix.target != 'editor'
         uses: ./.github/actions/godot-build
         env:
           D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
@@ -256,7 +252,6 @@ jobs:
           Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
 
       - name: Upload artifact
-        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true)))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
         uses: actions/upload-artifact@v7
         with:
           name: windows-${{ matrix.target }}${{ matrix.mono-flags }}-${{ matrix.scons-flags }}-${{ inputs.lto }}
