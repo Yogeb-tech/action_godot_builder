@@ -3,41 +3,41 @@ on:
   workflow_call:
     inputs:
       base-branch:
-        description: 'Base branch to use for the builds'
+        description: "Base branch to use for the builds"
         type: string
       lto:
         description: 'LTO mode. Options: "none", "thin", "full"'
         type: string
       repo:
-        description: 'Repository to use for the build'
+        description: "Repository to use for the build"
         type: string
       tag:
-        description: 'tag to use for the build'
+        description: "tag to use for the build"
         type: string
       module_flags:
-        description: 'Extra module flags, e.g. module_webm_enabled=no'
+        description: "Extra module flags, e.g. module_webm_enabled=no"
         type: string
       template_module_flags:
-        description: 'Extra module flags for template build, e.g. module_webm_enabled=no'
+        description: "Extra module flags for template build, e.g. module_webm_enabled=no"
         type: string
       encryption_key:
-        description: 'Optional encryption key to apply to template builds'
+        description: "Optional encryption key to apply to template builds"
         type: string
-        default: ''
+        default: ""
       run_editor:
-        description: 'Run editor builds'
+        description: "Run editor builds"
         type: boolean
         default: true
       run_editor_mono:
-        description: 'Run editor mono builds'
+        description: "Run editor mono builds"
         type: boolean
         default: false
       run_template:
-        description: 'Run template builds'
+        description: "Run template builds"
         type: boolean
         default: true
       run_template_mono:
-        description: 'Run template mono builds'
+        description: "Run template mono builds"
         type: boolean
         default: false
 
@@ -59,19 +59,19 @@ jobs:
           - name: Editor (target=editor)
             target: editor
             build-mono: false
-            scons-mono-flags: ''
+            scons-mono-flags: ""
             should_run: ${{ inputs.run_editor }}
 
           - name: Template (target=template_release)
             target: template_release
             build-mono: false
-            scons-mono-flags: ''
+            scons-mono-flags: ""
             should_run: ${{ inputs.run_template }}
-          
+
           - name: Template (target=template_debug)
             target: template_debug
             build-mono: false
-            scons-mono-flags: ''
+            scons-mono-flags: ""
             should_run: ${{ inputs.run_template }}
 
           - name: Editor Mono (target=editor)
@@ -113,7 +113,7 @@ jobs:
         if: matrix.should_run == true
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
 
       - name: Select Xcode 26
         if: matrix.should_run == true
@@ -144,7 +144,7 @@ jobs:
         if: matrix.should_run == true
         uses: ./.github/actions/godot-cache-restore
         with:
-              cache-name: v2-macos-${{ matrix.target }}-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}      
+          cache-name: v2-macos-${{ matrix.target }}-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Setup Python and SCons
@@ -171,26 +171,26 @@ jobs:
       - name: Install Mono toolchain
         if: matrix.should_run == true && matrix.build-mono
         run: |
-            if ! command -v brew >/dev/null 2>&1; then
-            echo "Homebrew not found on runner — aborting install"
-            exit 1
-            fi
-            brew update --quiet || true
-            if ! brew list mono >/dev/null 2>&1; then
-            echo "Installing mono..."
-            brew install mono
-            fi
+          if ! command -v brew >/dev/null 2>&1; then
+          echo "Homebrew not found on runner — aborting install"
+          exit 1
+          fi
+          brew update --quiet || true
+          if ! brew list mono >/dev/null 2>&1; then
+          echo "Installing mono..."
+          brew install mono
+          fi
 
       - name: Setup .NET SDK
         if: matrix.should_run == true && matrix.build-mono
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: "6.0.x"
 
       - name: Setup Vulkan SDK
         if: matrix.should_run == true
         run: |
-          sh builder_repo/install_vulkan_sdk_macos.sh
+          sh install_vulkan_sdk_macos.sh
 
       - name: Mono tools build (pre-glue)
         if: ${{ matrix.should_run == true && (matrix.build-mono && ((matrix.target == 'editor' && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix.target != 'editor' && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)))) }}
