@@ -59,13 +59,24 @@ jobs:
           - name: Template
             build-mono: false
             scons-mono-flags: ""
+            should_run: ${{ inputs.run_template }}
 
           - name: Template Mono
             build-mono: true
             scons-mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
+            should_run: ${{ inputs.run_template_mono }}
 
     steps:
+      - name: Check if build target is enabled
+        if: matrix.should_run != true
+        shell: pwsh
+        run: |
+          Write-Host "This build target (${{ matrix.name }}) has been disabled via runner inputs."
+          Write-Host "Exiting step sequence cleanly without processing standard dependencies."
+          exit 0
+
       - name: Checkout
+        if: matrix.should_run == true
         uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repo }}
@@ -73,11 +84,13 @@ jobs:
           submodules: recursive
 
       - name: Setup Node.js 24 (for tools/actions)
+        if: matrix.should_run == true
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
 
       - name: Checkout builder scripts (Vulkan SDK)
+        if: matrix.should_run == true
         uses: actions/checkout@v6
         with:
           repository: appsinacup/action_godot_builder
@@ -85,39 +98,42 @@ jobs:
           fetch-depth: 1
 
       - name: Restore Godot build cache
+        if: matrix.should_run == true
         uses: ./.github/actions/godot-cache-restore
         with:
-            cache-name: v2-ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
+          cache-name: v2-ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Setup Python and SCons
+        if: matrix.should_run == true
         uses: ./.github/actions/godot-deps
 
       - name: Install Mono toolchain
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         run: |
-            if ! command -v brew >/dev/null 2>&1; then
-            echo "Homebrew not found on runner — aborting install"
-            exit 1
-            fi
-            brew update --quiet || true
-            if ! brew list mono >/dev/null 2>&1; then
-            echo "Installing mono..."
-            brew install mono
-            fi
+          if ! command -v brew >/dev/null 2>&1; then
+          echo "Homebrew not found on runner — aborting install"
+          exit 1
+          fi
+          brew update --quiet || true
+          if ! brew list mono >/dev/null 2>&1; then
+          echo "Installing mono..."
+          brew install mono
+          fi
 
       - name: Setup .NET SDK
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "6.0.x"
 
       - name: Setup Vulkan SDK
+        if: matrix.should_run == true
         run: |
           sh builder_repo/install_vulkan_sdk_macos.sh
 
       - name: Mono tools build (pre-glue)
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no
@@ -125,11 +141,11 @@ jobs:
           target: editor
 
       - name: Generate C# glue
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         run: ./bin/godot.macos.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
 
       - name: Compilation Debug (arm64)
-        if: ${{ (matrix.build-mono == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix.build-mono != true && (inputs.run_template == 'true' || inputs.run_template == true)) }}
+        if: matrix.should_run == true && ((matrix.build-mono == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix.build-mono != true && (inputs.run_template == 'true' || inputs.run_template == true)))
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
@@ -137,7 +153,7 @@ jobs:
           target: template_debug
 
       - name: Compilation Release (arm64)
-        if: ${{ (matrix.build-mono == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix.build-mono != true && (inputs.run_template == 'true' || inputs.run_template == true)) }}
+        if: matrix.should_run == true && ((matrix.build-mono == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix.build-mono != true && (inputs.run_template == 'true' || inputs.run_template == true)))
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }} generate_bundle=yes
@@ -145,24 +161,25 @@ jobs:
           target: template_release
 
       - name: Save Godot build cache
-        uses: ./.github/actions/godot-cache-save
+        if: matrix.should_run == true
+        uses: ./.github/actions/godot-save-cache
         with:
-            cache-name: v2-ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
+          cache-name: v2-ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Build .NET solutions
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         run: |
           dotnet --info
           ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=ios --werror
 
       - name: Rename iOS export zip for Mono (avoid artifact merge collision)
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         run: |
           if [ -f bin/godot_ios.zip ]; then mv bin/godot_ios.zip bin/godot_ios_mono.zip; fi
 
       - name: Upload artifact
-        if: ${{ ((matrix.build-mono == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix.build-mono != true && (inputs.run_template == 'true' || inputs.run_template == true))) }}
+        if: matrix.should_run == true && ((matrix.build-mono == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix.build-mono != true && (inputs.run_template == 'true' || inputs.run_template == true)))
         uses: actions/upload-artifact@v7
         with:
           name: ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}

@@ -67,12 +67,14 @@ jobs:
             scons-mono-flags: ""
             build-mono: false
             legacy-scons: false
+            should_run: ${{ inputs.run_editor }}
 
           # TODO re-enable these
           - name: Editor (target=editor arch=x86_32)
             target: editor
             scons-flags: arch=x86_32
             legacy-scons: false
+            should_run: ${{ inputs.run_editor }}
 
           - name: Template (target=template_release, arch=x86_64)
             target: template_release
@@ -80,6 +82,7 @@ jobs:
             scons-mono-flags: ""
             build-mono: false
             legacy-scons: false
+            should_run: ${{ inputs.run_template }}
 
           - name: Template (target=template_debug, arch=x86_64)
             target: template_debug
@@ -87,6 +90,7 @@ jobs:
             scons-mono-flags: ""
             build-mono: false
             legacy-scons: false
+            should_run: ${{ inputs.run_template }}
 
           - name: Editor Mono (target=editor arch=x86_64)
             target: editor
@@ -94,6 +98,7 @@ jobs:
             scons-mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
             build-mono: true
             legacy-scons: false
+            should_run: ${{ inputs.run_editor_mono }}
 
           - name: Template Mono (target=template_release arch=x86_64)
             target: template_release
@@ -101,6 +106,7 @@ jobs:
             scons-mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
             build-mono: true
             legacy-scons: false
+            should_run: ${{ inputs.run_template_mono }}
 
           - name: Template Mono (target=template_debug arch=x86_64)
             target: template_debug
@@ -108,9 +114,19 @@ jobs:
             scons-mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
             build-mono: true
             legacy-scons: false
+            should_run: ${{ inputs.run_template_mono }}
 
     steps:
+      - name: Check if build target is enabled
+        if: matrix.should_run != true
+        shell: pwsh
+        run: |
+          Write-Host "This build target (${{ matrix.name }}) has been disabled via runner inputs."
+          Write-Host "Exiting step sequence cleanly without processing standard dependencies."
+          exit 0
+
       - name: Checkout
+        if: matrix.should_run == true
         uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repo }}
@@ -118,16 +134,19 @@ jobs:
           submodules: recursive
 
       - name: Setup Node.js 24 (for tools/actions)
+        if: matrix.should_run == true
         uses: actions/setup-node@v4
         with:
           node-version: '24'
 
       - name: Setup dependencies
+        if: matrix.should_run == true
         run: |
           sudo apt-get update
           sudo apt-get install libwayland-bin  # TODO: Figure out somehow how to embed this one.
 
       - name: Download pre-built AccessKit
+        if: matrix.should_run == true
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: AccessKit/accesskit-c
@@ -136,44 +155,47 @@ jobs:
           target: accesskit-c-0.18.0/accesskit_c.zip
 
       - name: Extract pre-built AccessKit
+        if: matrix.should_run == true
         run: unzip -o accesskit-c-0.18.0/accesskit_c.zip
 
       - name: Install 32-bit C++ build dependencies
-        if: matrix.scons-flags == 'arch=x86_32'
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86_32'
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-multilib g++-multilib libc6-dev-i386
 
       - name: Install Mono toolchain
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         run: |
           sudo apt-get update
           sudo apt-get install -y mono-devel nuget
 
       - name: Setup .NET SDK
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "6.0.x"
 
       - name: Free disk space on runner
+        if: matrix.should_run == true
         run: |
           echo "Disk usage before:" && df -h
           sudo rm -rf /usr/local/lib/android
           echo "Disk usage after:" && df -h
 
       - name: Restore Godot build cache
+        if: matrix.should_run == true
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: linux-${{ matrix.target }}-${{ matrix.scons-flags }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
         continue-on-error: true
 
       - name: Setup Python and SCons
-        if: "!matrix.legacy-scons"
+        if: matrix.should_run == true && !matrix.legacy-scons
         uses: ./.github/actions/godot-deps
 
       - name: Map encryption key to step env and validate
-        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true))) }}
+        if: ${{ matrix.should_run == true && (inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
         env:
           ENCRYPTION_KEY_INPUT: ${{ inputs.encryption_key }}
         shell: sh
@@ -185,12 +207,12 @@ jobs:
           echo "ENCRYPTION_KEY=$ENCRYPTION_KEY_INPUT" >> $GITHUB_ENV
 
       - name: Mask encryption key
-        if: ${{ inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true))) }}
+        if: ${{ matrix.should_run == true && (inputs.encryption_key != '' && matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
         run: echo "::add-mask::$ENCRYPTION_KEY"
         shell: sh
 
       - name: Setup Python and SCons (legacy versions)
-        if: matrix.legacy-scons
+        if: matrix.should_run == true && matrix.legacy-scons
         uses: ./.github/actions/godot-deps
         with:
           # Sync with Ensure*Version in SConstruct.
@@ -198,7 +220,7 @@ jobs:
           scons-version: 4.0
 
       - name: Mono compilation (pre-glue)
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no
@@ -206,12 +228,12 @@ jobs:
           target: editor
 
       - name: Generate C# glue
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         run: |
           ./bin/godot.linuxbsd.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
 
       - name: Compilation (Editor)
-        if: ${{ matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true))) }}
+        if: ${{ matrix.should_run == true && (matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true)))) }}
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ matrix.scons-mono-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }}
@@ -219,7 +241,7 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Compilation (Template)
-        if: ${{ matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true))) }}
+        if: ${{ matrix.should_run == true && (matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
         uses: ./.github/actions/godot-build
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
@@ -229,6 +251,7 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Checkout builder repo (cache purge script)
+        if: matrix.should_run == true
         uses: actions/checkout@v6
         with:
           repository: appsinacup/action_godot_builder
@@ -236,24 +259,26 @@ jobs:
           fetch-depth: 1
 
       - name: Save Godot build cache
+        if: matrix.should_run == true
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: linux-${{ matrix.target }}-${{ matrix.scons-flags }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
         continue-on-error: true
 
       - name: Prepare artifact
+        if: matrix.should_run == true
         run: |
           strip bin/godot.*
           chmod +x bin/godot.*
 
       - name: Build .NET solutions
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         run: |
           dotnet --info
           ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=linuxbsd --werror
 
       - name: Upload artifact
-        if: ${{ (matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true)))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
+        if: ${{ matrix.should_run == true && ((matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true)))) || (matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) ) }}
         uses: actions/upload-artifact@v7
         with:
           name: linux-${{ matrix.target }}-${{ matrix.scons-flags }}-${{ inputs.lto }}${{ matrix.build-mono && '-mono' || '' }}
