@@ -182,18 +182,17 @@ jobs:
         if: matrix.should_run == true && matrix.scons-flags == 'arch=arm64'
         run: Expand-Archive -Force angle/angle_arm64.zip ${{ github.workspace }}/
 
-      - name: Download pre-built AccessKit
+      - name: Download and Extract pre-built AccessKit via Python
         if: matrix.should_run == true
-        uses: dsaltares/fetch-gh-release-asset@1.1.2
-        with:
-          repo: AccessKit/accesskit-c
-          version: tags/v0.21.2
-          file: accesskit-c-0.21.2.zip
-          target: accesskit-c-0.21.2/accesskit_c.zip
-
-      - name: Extract pre-built AccessKit
-        if: matrix.should_run == true
-        run: unzip -o accesskit-c-0.21.2/accesskit_c.zip
+        shell: pwsh
+        id: accesskit-sdk
+        run: |
+          if (python ./misc/scripts/install_accesskit.py) {
+            echo "ACCESSKIT_ENABLED=yes" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "::warning::AccessKit SDK installation failed, building without AccessKit support."
+            echo "ACCESSKIT_ENABLED=no" >> $env:GITHUB_OUTPUT
+          }
 
       # Mono prerequisites
       - name: Setup .NET SDK
@@ -206,7 +205,7 @@ jobs:
         if: matrix.should_run == true && matrix.build-mono
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: arch=x86_64 module_mono_enabled=yes mono_glue=no ${{ inputs.module_flags }}
+          scons-flags: arch=x86_64 module_mono_enabled=yes mono_glue=no ${{ inputs.module_flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: windows
           target: editor
 
@@ -222,7 +221,7 @@ jobs:
         env:
           D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.mono-flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: windows
           target: ${{ matrix.target }}
 
@@ -233,7 +232,7 @@ jobs:
           D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: windows
           target: ${{ matrix.target }}
 
