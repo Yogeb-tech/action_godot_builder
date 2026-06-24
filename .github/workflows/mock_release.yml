@@ -3,6 +3,11 @@ name: Test Release Workflow
 on:
   workflow_dispatch:
     inputs:
+      request_id:
+        description: "Unique ID for this request"
+        type: string
+        required: true
+        default: ""
       repo:
         description: "Repository to use for the build"
         type: string
@@ -43,6 +48,10 @@ on:
           - "lto=none"
           - "lto=thin"
           - "lto=full"
+      platform_type:
+        description: "Comma-separated list of platforms to build (e.g. windows,web,ios,linux,macos,android)"
+        type: string
+        default: "windows,web,ios,linux,macos,android"
       run_editor:
         description: "Run editor builds"
         type: boolean
@@ -118,12 +127,12 @@ jobs:
           echo "Module flags: $MODULE_FLAGS" >> build_info.txt
           echo "Template flags: $TEMPLATE_MODULE_FLAGS" >> build_info.txt
           echo "Created on: $(date)" >> build_info.txt
-          
+
           mkdir -p build_output
           cp debug.txt build_output/
           cp build_info.txt build_output/
           echo "This is a simulated build output" > build_output/readme.txt
-          
+
           zip -r godot_build_$TAG_RELEASE.zip build_output/
 
       - name: Upload artifact
@@ -135,5 +144,5 @@ jobs:
 
       - name: Pause before finishing
         run: |
-          echo "Waiting 60 seconds..."
-          sleep 60
+          echo "Waiting 360 seconds..."
+          sleep 360
