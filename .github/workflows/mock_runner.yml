@@ -1,5 +1,5 @@
 name: Test Release Workflow
-
+run-name: Mock Build - ${{ inputs.request_id }}
 on:
   workflow_dispatch:
     inputs:
