@@ -44,9 +44,8 @@ on:
 # Global Settings
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
-  SCONSFLAGS: verbose=yes warnings=extra werror=yes strict_checks=yes "accesskit_sdk_path=${{ github.workspace }}/accesskit-c-0.18.0/"
+  SCONSFLAGS: verbose=yes warnings=extra werror=yes strict_checks=yes "accesskit_sdk_path=${{ github.workspace }}/accesskit-c-0.21.2/"
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   TSAN_OPTIONS: suppressions=misc/error_suppressions/tsan.txt
@@ -54,7 +53,6 @@ env:
 
 jobs:
   build-linux:
-    # Stay one LTS before latest to increase portability of Linux artifacts.
     runs-on: ubuntu-22.04
     name: ${{ matrix.name }}
     strategy:
@@ -69,10 +67,11 @@ jobs:
             legacy-scons: false
             should_run: ${{ inputs.run_editor }}
 
-          # TODO re-enable these
           - name: Editor (target=editor arch=x86_32)
             target: editor
             scons-flags: arch=x86_32
+            scons-mono-flags: ""
+            build-mono: false
             legacy-scons: false
             should_run: ${{ inputs.run_editor }}
 
@@ -137,26 +136,26 @@ jobs:
         if: matrix.should_run == true
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
 
       - name: Setup dependencies
         if: matrix.should_run == true
         run: |
           sudo apt-get update
-          sudo apt-get install libwayland-bin  # TODO: Figure out somehow how to embed this one.
+          sudo apt-get install libwayland-bin
 
       - name: Download pre-built AccessKit
         if: matrix.should_run == true
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: AccessKit/accesskit-c
-          version: tags/0.18.0
-          file: accesskit-c-0.18.0.zip
-          target: accesskit-c-0.18.0/accesskit_c.zip
+          version: tags/v0.21.2
+          file: accesskit-c-0.21.2.zip
+          target: accesskit-c-0.21.2/accesskit_c.zip
 
       - name: Extract pre-built AccessKit
         if: matrix.should_run == true
-        run: unzip -o accesskit-c-0.18.0/accesskit_c.zip
+        run: unzip -o accesskit-c-0.21.2/accesskit_c.zip
 
       - name: Install 32-bit C++ build dependencies
         if: matrix.should_run == true && matrix.scons-flags == 'arch=x86_32'
@@ -215,7 +214,6 @@ jobs:
         if: matrix.should_run == true && matrix.legacy-scons
         uses: ./.github/actions/godot-deps
         with:
-          # Sync with Ensure*Version in SConstruct.
           python-version: 3.8
           scons-version: 4.0
 

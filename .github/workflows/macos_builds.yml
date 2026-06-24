@@ -44,9 +44,8 @@ on:
 # Global Settings
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
-  SCONSFLAGS: verbose=yes warnings=extra werror=yes strict_checks=yes debug_symbols=no use_static_cpp=yes "accesskit_sdk_path=${{ github.workspace }}/accesskit-c-0.18.0/"
+  SCONSFLAGS: verbose=yes warnings=extra werror=yes strict_checks=yes debug_symbols=no use_static_cpp=yes "accesskit_sdk_path=${{ github.workspace }}/accesskit-c-0.21.2/"
 
 jobs:
   build-macos:
@@ -132,13 +131,13 @@ jobs:
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: AccessKit/accesskit-c
-          version: tags/0.18.0
-          file: accesskit-c-0.18.0.zip
-          target: accesskit-c-0.18.0/accesskit_c.zip
+          version: tags/v0.21.2
+          file: accesskit-c-0.21.2.zip
+          target: accesskit-c-0.21.2/accesskit_c.zip
 
       - name: Extract pre-built AccessKit
         if: matrix.should_run == true
-        run: unzip -o accesskit-c-0.18.0/accesskit_c.zip
+        run: unzip -o accesskit-c-0.21.2/accesskit_c.zip
 
       - name: Restore Godot build cache
         if: matrix.should_run == true
