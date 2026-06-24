@@ -126,18 +126,17 @@ jobs:
           path: builder_repo
           fetch-depth: 1
 
-      - name: Download pre-built AccessKit
+      - name: Download and Extract pre-built AccessKit via Python
         if: matrix.should_run == true
-        uses: dsaltares/fetch-gh-release-asset@1.1.2
-        with:
-          repo: AccessKit/accesskit-c
-          version: tags/v0.21.2
-          file: accesskit-c-0.21.2.zip
-          target: accesskit-c-0.21.2/accesskit_c.zip
-
-      - name: Extract pre-built AccessKit
-        if: matrix.should_run == true
-        run: unzip -o accesskit-c-0.21.2/accesskit_c.zip
+        shell: bash
+        id: accesskit-sdk
+        run: |
+          if python ./misc/scripts/install_accesskit.py; then
+            echo "ACCESSKIT_ENABLED=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::AccessKit SDK installation failed, building without AccessKit support."
+            echo "ACCESSKIT_ENABLED=no" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Restore Godot build cache
         if: matrix.should_run == true
@@ -195,7 +194,7 @@ jobs:
         if: ${{ matrix.should_run == true && (matrix.build-mono && ((matrix.target == 'editor' && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix.target != 'editor' && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)))) }}
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no
+          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: macos
           target: editor
 
@@ -207,7 +206,7 @@ jobs:
         if: ${{ matrix.should_run == true && (matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true)))) }}
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.scons-mono-flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: macos
           target: ${{ matrix.target }}
 
@@ -215,7 +214,7 @@ jobs:
         if: ${{ matrix.should_run == true && (matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true)))) }}
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.scons-mono-flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: macos
           target: ${{ matrix.target }}
 
@@ -225,7 +224,7 @@ jobs:
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: macos
           target: ${{ matrix.target }}
 
@@ -235,7 +234,7 @@ jobs:
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
+          scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: macos
           target: ${{ matrix.target }}
 
@@ -264,9 +263,9 @@ jobs:
           out="./bin/godot.macos.${{ matrix.target }}${mono_suffix}.universal"
           if [ -f "$x86" ] && [ -f "$arm" ]; then
             lipo -create "$x86" "$arm" -output "$out"
-          elif [ -f "$x86" ]; then
+          elif [ -f "$x86" ] && [ ! -f "$arm" ]; then
             cp "$x86" "$out"
-          elif [ -f "$arm" ]; then
+          elif [ -f "$arm" ] && [ ! -f "$x86" ]; then
             cp "$arm" "$out"
           else
             echo "Warning: no binaries produced for ${matrix.target}${mono_suffix}"
