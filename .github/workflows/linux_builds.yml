@@ -144,22 +144,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install libwayland-bin
 
-      - name: Download and Extract AccessKit
-        if: matrix.should_run == true
-        shell: bash
+      - name: Download pre-built AccessKit
+        shell: sh
         id: accesskit-sdk
         run: |
-          # Create the target directory SCons expects
-          mkdir -p accesskit-c-0.21.2
-
-          # Download directly from GitHub Releases using native GH CLI (pre-installed on runners)
-          if gh release download v0.21.2 --repo AccessKit/accesskit-c --pattern "accesskit-c-linux-x86_64.zip" --dir accesskit-c-0.21.2; then
-              # Extract directly into that destination folder (-d)
-              unzip -o accesskit-c-0.21.2/accesskit-c-linux-x86_64.zip -d accesskit-c-0.21.2
-              echo "ACCESSKIT_ENABLED=yes" >> "$GITHUB_OUTPUT"
+          if python ./misc/scripts/install_accesskit.py; then
+            echo "ACCESSKIT_ENABLED=yes" >> "$GITHUB_OUTPUT"
           else
-              echo "::warning::AccessKit SDK installation failed, building without AccessKit support."
-              echo "ACCESSKIT_ENABLED=no" >> "$GITHUB_OUTPUT"
+            echo "::warning::AccessKit SDK installation failed, building without AccessKit support."
+            echo "ACCESSKIT_ENABLED=no" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Extract pre-built AccessKit
