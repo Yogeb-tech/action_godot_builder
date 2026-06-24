@@ -187,11 +187,17 @@ jobs:
         shell: pwsh
         id: accesskit-sdk
         run: |
-          python ./.github/misc/scripts/install_accesskit.py
-          if ($LASTEXITCODE -eq 0) {
-            echo "ACCESSKIT_ENABLED=yes" >> $env:GITHUB_OUTPUT
+          $script = "./misc/scripts/install_accesskit.py"
+          if (Test-Path $script) {
+            python $script
+            if ($LASTEXITCODE -eq 0) {
+              echo "ACCESSKIT_ENABLED=yes" >> $env:GITHUB_OUTPUT
+            } else {
+              Write-Host "::warning::AccessKit installation script failed, building without AccessKit support."
+              echo "ACCESSKIT_ENABLED=no" >> $env:GITHUB_OUTPUT
+            }
           } else {
-            Write-Host "::warning::AccessKit SDK installation failed, building without AccessKit support."
+            Write-Host "::warning::AccessKit installation script not found, building without AccessKit support."
             echo "ACCESSKIT_ENABLED=no" >> $env:GITHUB_OUTPUT
           }
 
