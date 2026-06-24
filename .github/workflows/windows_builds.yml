@@ -187,7 +187,8 @@ jobs:
         shell: pwsh
         id: accesskit-sdk
         run: |
-          if (python ./misc/scripts/install_accesskit.py) {
+          python ./.github/misc/scripts/install_accesskit.py
+          if ($LASTEXITCODE -eq 0) {
             echo "ACCESSKIT_ENABLED=yes" >> $env:GITHUB_OUTPUT
           } else {
             Write-Host "::warning::AccessKit SDK installation failed, building without AccessKit support."
