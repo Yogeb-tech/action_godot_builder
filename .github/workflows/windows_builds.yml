@@ -33,11 +33,9 @@ on:
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
-  # <-- 4.7 change: removed angle_libs, accesskit_sdk_path, d3d12=yes
-  # they are now passed dynamically per build step.
   SCONSFLAGS: verbose=yes warnings=extra strict_checks=yes debug_symbols=no ${{ inputs.module_flags }} use_static_cpp=yes
   SCONS_CACHE_MSVC_CONFIG: true
-  PYTHONIOENCODING: utf8 # <-- 4.7 change: added for consistency
+  PYTHONIOENCODING: utf8
 
 jobs:
   build-windows:
@@ -123,51 +121,123 @@ jobs:
         if: matrix.should_run == true
         uses: ./.github/actions/godot-deps
 
-      # <-- 4.7 change: use official install scripts and capture outputs
-      - name: Download Direct3D 12 SDK components
-        if: matrix.should_run == true
-        shell: sh # <-- 4.7 change: use sh (Git Bash) for better compatibility
-        id: d3d12-sdk
-        run: |
-          if python ./misc/scripts/install_d3d12_sdk_windows.py; then
-            echo "D3D12_ENABLED=yes" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::Direct3D 12 SDK installation failed, building without Direct3D 12 support."
-            echo "D3D12_ENABLED=no" >> "$GITHUB_OUTPUT"
-          fi
-        continue-on-error: true
-
-      - name: Download pre-built ANGLE
-        if: matrix.should_run == true
-        shell: sh # <-- 4.7 change: use official script, remove manual fetch
-        id: angle-sdk
-        run: |
-          if python ./misc/scripts/install_angle.py; then
-            echo "ANGLE_ENABLED=yes" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::ANGLE SDK installation failed, building without ANGLE support."
-            echo "ANGLE_ENABLED=no" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Download WinRT components # <-- 4.7 change: new required step
+      # <-- Backwards compatible: try 4.7 method, fall back to 4.6
+      - name: Download Direct3D 12 SDK components (4.7+)
         if: matrix.should_run == true
         shell: sh
-        run: python ./misc/scripts/install_winrt.py
+        id: d3d12-sdk
+        run: |
+          if [ -f ./misc/scripts/install_d3d12_sdk_windows.py ]; then
+            if python ./misc/scripts/install_d3d12_sdk_windows.py; then
+              echo "D3D12_ENABLED=yes" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::Direct3D 12 SDK installation failed, building without Direct3D 12 support."
+              echo "D3D12_ENABLED=no" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "D3D12_ENABLED=yes" >> "$GITHUB_OUTPUT"
+          fi
         continue-on-error: true
 
-      - name: Download pre-built AccessKit
+      - name: Download pre-built ANGLE (4.7+)
         if: matrix.should_run == true
-        shell: sh # <-- 4.7 change: use official script
-        id: accesskit-sdk
+        shell: sh
+        id: angle-sdk
         run: |
-          if python ./misc/scripts/install_accesskit.py; then
-            echo "ACCESSKIT_ENABLED=yes" >> "$GITHUB_OUTPUT"
+          if [ -f ./misc/scripts/install_angle.py ]; then
+            if python ./misc/scripts/install_angle.py; then
+              echo "ANGLE_ENABLED=yes" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::ANGLE SDK installation failed, building without ANGLE support."
+              echo "ANGLE_ENABLED=no" >> "$GITHUB_OUTPUT"
+            fi
           else
-            echo "::warning::AccessKit SDK installation failed, building without AccessKit support."
-            echo "ACCESSKIT_ENABLED=no" >> "$GITHUB_OUTPUT"
+            echo "ANGLE_ENABLED=yes" >> "$GITHUB_OUTPUT"
           fi
 
-      # <-- 4.7 change: encryption key logic remains as-is (if you need it)
+      - name: Download pre-built ANGLE static libraries (x86_64) [4.6 fallback]
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86_64' && ! steps.angle-sdk.outputs.ANGLE_ENABLED
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: godotengine/godot-angle-static
+          version: tags/chromium/6601.2
+          file: godot-angle-static-x86_64-msvc-release.zip
+          target: angle/angle_x86_64.zip
+
+      - name: Extract pre-built ANGLE static libraries (x86_64) [4.6 fallback]
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86_64' && ! steps.angle-sdk.outputs.ANGLE_ENABLED
+        run: Expand-Archive -Force angle/angle_x86_64.zip ${{ github.workspace }}/
+
+      - name: Download pre-built ANGLE static libraries (x86_32) [4.6 fallback]
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86' && ! steps.angle-sdk.outputs.ANGLE_ENABLED
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: godotengine/godot-angle-static
+          version: tags/chromium/6601.2
+          file: godot-angle-static-x86_32-msvc-release.zip
+          target: angle/angle_x86_32.zip
+
+      - name: Extract pre-built ANGLE static libraries (x86_32) [4.6 fallback]
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86' && ! steps.angle-sdk.outputs.ANGLE_ENABLED
+        run: Expand-Archive -Force angle/angle_x86_32.zip ${{ github.workspace }}/
+
+      - name: Download pre-built ANGLE static libraries (arm64) [4.6 fallback]
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=arm64' && ! steps.angle-sdk.outputs.ANGLE_ENABLED
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: godotengine/godot-angle-static
+          version: tags/chromium/6601.2
+          file: godot-angle-static-arm64-msvc-release.zip
+          target: angle/angle_arm64.zip
+
+      - name: Extract pre-built ANGLE static libraries (arm64) [4.6 fallback]
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=arm64' && ! steps.angle-sdk.outputs.ANGLE_ENABLED
+        run: Expand-Archive -Force angle/angle_arm64.zip ${{ github.workspace }}/
+
+      - name: Download WinRT components (4.7+)
+        if: matrix.should_run == true
+        shell: sh
+        run: |
+          if [ -f ./misc/scripts/install_winrt.py ]; then
+            python ./misc/scripts/install_winrt.py
+          fi
+        continue-on-error: true
+
+      - name: Download pre-built AccessKit (4.7+)
+        if: matrix.should_run == true
+        shell: sh
+        id: accesskit-sdk
+        run: |
+          if [ -f ./misc/scripts/install_accesskit.py ]; then
+            if python ./misc/scripts/install_accesskit.py; then
+              echo "ACCESSKIT_ENABLED=yes" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::AccessKit SDK installation failed, building without AccessKit support."
+              echo "ACCESSKIT_ENABLED=no" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "ACCESSKIT_ENABLED=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download pre-built AccessKit via Python [4.6 fallback]
+        if: matrix.should_run == true && ! steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED
+        shell: pwsh
+        id: accesskit-sdk-legacy
+        run: |
+          $script = "./misc/scripts/install_accesskit.py"
+          if (Test-Path $script) {
+            python $script
+            if ($LASTEXITCODE -eq 0) {
+              echo "ACCESSKIT_ENABLED=yes" >> $env:GITHUB_OUTPUT
+            } else {
+              Write-Host "::warning::AccessKit installation script failed, building without AccessKit support."
+              echo "ACCESSKIT_ENABLED=no" >> $env:GITHUB_OUTPUT
+            }
+          } else {
+            Write-Host "::warning::AccessKit installation script not found, building without AccessKit support."
+            echo "ACCESSKIT_ENABLED=no" >> $env:GITHUB_OUTPUT
+          }
+
       - name: Map encryption key to step env and validate
         if: matrix.should_run == true && inputs.encryption_key != '' && matrix.target != 'editor'
         env:
@@ -182,19 +252,18 @@ jobs:
         run: Write-Host "::add-mask::$env:ENCRYPTION_KEY"
         shell: pwsh
 
-      # <-- 4.7 change: Mono uses .NET 8 now
+      # <-- Backwards compatible: detect Godot version for .NET
       - name: Setup .NET SDK
         if: matrix.should_run == true && matrix.build-mono
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: "8.0.x" # <-- 4.7 change: from 6.0.x to 8.0.x
+          dotnet-version: ${{ contains(github.event.repository.default_branch, '4.7') && '8.0.x' || '6.0.x' }}
 
       - name: Mono tools build (pre-glue)
         if: matrix.should_run == true && matrix.build-mono
         uses: ./.github/actions/godot-build
         with:
-          # <-- 4.7 change: pass dynamic flags explicitly
-          scons-flags: arch=x86_64 module_mono_enabled=yes mono_glue=no ${{ inputs.module_flags }} d3d12=${{ steps.d3d12-sdk.outputs.D3D12_ENABLED }} angle=${{ steps.angle-sdk.outputs.ANGLE_ENABLED }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
+          scons-flags: arch=x86_64 module_mono_enabled=yes mono_glue=no ${{ inputs.module_flags }} ${{ steps.angle-sdk.outputs.ANGLE_ENABLED == 'yes' && 'angle=yes' || '' }} ${{ steps.d3d12-sdk.outputs.D3D12_ENABLED == 'yes' && 'd3d12=yes' || '' }} ${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED == 'yes' && 'accesskit=yes' || '' }}
           platform: windows
           target: editor
 
@@ -208,9 +277,12 @@ jobs:
         if: matrix.should_run == true && matrix.target == 'editor'
         uses: ./.github/actions/godot-build
         env:
-          D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }} # kept for backwards compatibility
+          D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
+          # <-- Backwards compatible: conditionally set legacy paths
+          ANGLE_LIBS: ${{ !steps.angle-sdk.outputs.ANGLE_ENABLED && github.workspace || '' }}
+          ACCESSKIT_SDK_PATH: ${{ !steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED && format('{0}/accesskit-c-0.21.2/', github.workspace) || '' }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.mono-flags }} d3d12=${{ steps.d3d12-sdk.outputs.D3D12_ENABLED }} angle=${{ steps.angle-sdk.outputs.ANGLE_ENABLED }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.mono-flags }} ${{ steps.angle-sdk.outputs.ANGLE_ENABLED == 'yes' && 'angle=yes' || format('angle_libs={0}', github.workspace) }} ${{ steps.d3d12-sdk.outputs.D3D12_ENABLED == 'yes' && 'd3d12=yes' || '' }} ${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED == 'yes' && 'accesskit=yes' || format('accesskit_sdk_path={0}/accesskit-c-0.21.2/', github.workspace) }}
           platform: windows
           target: ${{ matrix.target }}
 
@@ -220,8 +292,10 @@ jobs:
         env:
           D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
+          ANGLE_LIBS: ${{ !steps.angle-sdk.outputs.ANGLE_ENABLED && github.workspace || '' }}
+          ACCESSKIT_SDK_PATH: ${{ !steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED && format('{0}/accesskit-c-0.21.2/', github.workspace) || '' }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} d3d12=${{ steps.d3d12-sdk.outputs.D3D12_ENABLED }} angle=${{ steps.angle-sdk.outputs.ANGLE_ENABLED }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} ${{ steps.angle-sdk.outputs.ANGLE_ENABLED == 'yes' && 'angle=yes' || format('angle_libs={0}', github.workspace) }} ${{ steps.d3d12-sdk.outputs.D3D12_ENABLED == 'yes' && 'd3d12=yes' || '' }} ${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED == 'yes' && 'accesskit=yes' || format('accesskit_sdk_path={0}/accesskit-c-0.21.2/', github.workspace) }}
           platform: windows
           target: ${{ matrix.target }}
 
@@ -238,7 +312,8 @@ jobs:
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: windows-${{ matrix.target }}${{ matrix.mono-flags }}-${{ matrix.scons-flags }}-${{ inputs.lto }}
-          purge-cache-script: misc/scripts/purge_cache.py # <-- 4.7 change: added to handle stale cache
+          # Only use purge script if it exists (4.7+)
+          purge-cache-script: ${{ contains(github.event.repository.default_branch, '4.7') && 'misc/scripts/purge_cache.py' || '' }}
         continue-on-error: true
 
       - name: Build .NET solutions
