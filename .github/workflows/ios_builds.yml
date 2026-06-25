@@ -44,7 +44,6 @@ on:
 # Global Settings
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
   SCONSFLAGS: verbose=yes warnings=extra werror=yes debug_symbols=no strict_checks=yes ${{ inputs.module_flags }} use_static_cpp=yes
 
@@ -125,7 +124,7 @@ jobs:
         if: matrix.should_run == true && matrix.build-mono
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: "6.0.x"
+          dotnet-version: ${{ contains(inputs.base-branch, '4.7') || contains(inputs.base-branch, 'master') && '8.0.x' || '6.0.x' }}
 
       - name: Setup Vulkan SDK
         if: matrix.should_run == true
