@@ -110,7 +110,7 @@ jobs:
         if: matrix.should_run == true && matrix.build-mono
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ contains(inputs.base-branch, '4.7') || contains(inputs.base-branch, 'master') && '8.0.x' || '6.0.x' }}
+          dotnet-version: "6.0.x"
 
       - name: Compilation (arm64)
         if: matrix.should_run == true

@@ -45,8 +45,7 @@ on:
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
-  # Removed hardcoded accesskit_sdk_path
-  SCONSFLAGS: verbose=yes warnings=extra werror=yes strict_checks=yes
+  SCONSFLAGS: verbose=yes warnings=extra werror=yes strict_checks=yes "accesskit_sdk_path=${{ github.workspace }}/accesskit-c-0.21.2/"
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   TSAN_OPTIONS: suppressions=misc/error_suppressions/tsan.txt
@@ -145,8 +144,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install libwayland-bin
 
-      # Hybrid AccessKit detection
-      - name: Download and Extract pre-built AccessKit (4.7+)
+      - name: Download and Extract pre-built AccessKit via Python
         if: matrix.should_run == true
         shell: sh
         id: accesskit-sdk
@@ -154,7 +152,7 @@ jobs:
           if python ./misc/scripts/install_accesskit.py; then
             echo "ACCESSKIT_ENABLED=yes" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::AccessKit SDK installation failed or script not found, falling back to hardcoded path (4.6)."
+            echo "::warning::AccessKit SDK installation failed, building without AccessKit support."
             echo "ACCESSKIT_ENABLED=no" >> "$GITHUB_OUTPUT"
           fi
 
@@ -170,12 +168,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mono-devel nuget
 
-      # .NET version conditional on base-branch (if contains 4.7 or master, use 8.0)
       - name: Setup .NET SDK
         if: matrix.should_run == true && matrix.build-mono
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: ${{ contains(inputs.base-branch, '4.7') || contains(inputs.base-branch, 'master') && '8.0.x' || '6.0.x' }}
+          dotnet-version: "6.0.x"
 
       - name: Free disk space on runner
         if: matrix.should_run == true
@@ -223,7 +220,7 @@ jobs:
         if: matrix.should_run == true && matrix.build-mono
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no ${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED == 'yes' && 'accesskit=yes' || format('accesskit_sdk_path={0}/accesskit-c-0.21.2/', github.workspace) }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} module_mono_enabled=yes mono_glue=no accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: linuxbsd
           target: editor
 
@@ -236,7 +233,7 @@ jobs:
         if: ${{ matrix.should_run == true && (matrix.target == 'editor' && ((matrix['build-mono'] == true && (inputs.run_editor_mono == 'true' || inputs.run_editor_mono == true)) || (matrix['build-mono'] != true && (inputs.run_editor == 'true' || inputs.run_editor == true)))) }}
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ matrix.scons-mono-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED == 'yes' && 'accesskit=yes' || format('accesskit_sdk_path={0}/accesskit-c-0.21.2/', github.workspace) }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ matrix.scons-mono-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: linuxbsd
           target: ${{ matrix.target }}
 
@@ -246,7 +243,7 @@ jobs:
         env:
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ matrix.scons-mono-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED == 'yes' && 'accesskit=yes' || format('accesskit_sdk_path={0}/accesskit-c-0.21.2/', github.workspace) }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ matrix.scons-mono-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: linuxbsd
           target: ${{ matrix.target }}
 
