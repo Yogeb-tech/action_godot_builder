@@ -44,8 +44,8 @@ on:
 # Global Settings
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
-  # Removed warning suppression flags. Requires standard code patch to resolve designator warnings.
   SCONSFLAGS: verbose=yes warnings=extra werror=yes debug_symbols=no strict_checks=yes ${{ inputs.module_flags }} use_static_cpp=yes
 
 jobs:
@@ -83,6 +83,20 @@ jobs:
           ref: ${{ inputs.tag }}
           submodules: recursive
 
+      - name: Setup Node.js 24 (for tools/actions)
+        if: matrix.should_run == true
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Checkout builder scripts (Vulkan SDK)
+        if: matrix.should_run == true
+        uses: actions/checkout@v6
+        with:
+          repository: appsinacup/action_godot_builder
+          path: builder_repo
+          fetch-depth: 1
+
       - name: Restore Godot build cache
         if: matrix.should_run == true
         uses: ./.github/actions/godot-cache-restore
@@ -98,20 +112,25 @@ jobs:
         if: matrix.should_run == true && matrix.build-mono
         run: |
           if ! command -v brew >/dev/null 2>&1; then
-            echo "Homebrew not found on runner — aborting install"
-            exit 1
+          echo "Homebrew not found on runner — aborting install"
+          exit 1
           fi
           brew update --quiet || true
           if ! brew list mono >/dev/null 2>&1; then
-            echo "Installing mono..."
-            brew install mono
+          echo "Installing mono..."
+          brew install mono
           fi
 
+      # -------- MINIMAL CHANGE START --------
       - name: Setup .NET SDK
         if: matrix.should_run == true && matrix.build-mono
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: "8.0.x"
+          # Choose .NET version based on base-branch:
+          # - "4.7" or later -> .NET 8
+          # - otherwise (4.6) -> .NET 6
+          dotnet-version: ${{ contains(inputs.base-branch, '4.7') && '8.0.x' || '6.0.x' }}
+      # -------- MINIMAL CHANGE END --------
 
       - name: Setup Vulkan SDK
         if: matrix.should_run == true
@@ -131,7 +150,7 @@ jobs:
         run: ./bin/godot.macos.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
 
       - name: Compilation Debug (arm64)
-        if: matrix.should_run == true
+        if: matrix.should_run == true && ((matrix.build-mono == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix.build-mono != true && (inputs.run_template == 'true' || inputs.run_template == true)))
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }}
@@ -139,7 +158,7 @@ jobs:
           target: template_debug
 
       - name: Compilation Release (arm64)
-        if: matrix.should_run == true
+        if: matrix.should_run == true && ((matrix.build-mono == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix.build-mono != true && (inputs.run_template == 'true' || inputs.run_template == true)))
         uses: ./.github/actions/godot-build
         with:
           scons-flags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }} generate_bundle=yes
@@ -165,7 +184,7 @@ jobs:
           if [ -f bin/godot_ios.zip ]; then mv bin/godot_ios.zip bin/godot_ios_mono.zip; fi
 
       - name: Upload artifact
-        if: matrix.should_run == true
+        if: matrix.should_run == true && ((matrix.build-mono == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix.build-mono != true && (inputs.run_template == 'true' || inputs.run_template == true)))
         uses: actions/upload-artifact@v7
         with:
           name: ios-${{ matrix.scons-mono-flags }}-${{ inputs.lto }}
