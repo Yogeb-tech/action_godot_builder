@@ -143,25 +143,44 @@ jobs:
         run: echo "D3D12_SDK_PATH=$env:LOCALAPPDATA\Godot\build_deps" >> $env:GITHUB_ENV
         shell: pwsh
 
-
+      # ---- FIXED: Fallback using nuget (reliable) ----
       - name: Verify D3D12 SDK and fallback if needed
         if: matrix.should_run == true
         shell: pwsh
         run: |
           $sdkPath = $env:LOCALAPPDATA + "\Godot\build_deps"
           if (-not (Test-Path "$sdkPath\Include\d3d12.h")) {
-            Write-Host "D3D12 SDK not found in $sdkPath, downloading manually..."
-            $url = "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.715.0"
-            $zip = "$env:TEMP\d3d12.zip"
-            Invoke-WebRequest -Uri $url -OutFile $zip
-            Expand-Archive -Force $zip -DestinationPath $sdkPath
-            if (Test-Path "$sdkPath\build\native\include") {
-              Move-Item -Force "$sdkPath\build\native\include" $sdkPath
-              Move-Item -Force "$sdkPath\build\native\lib" $sdkPath
+            Write-Host "D3D12 SDK not found in $sdkPath, installing via nuget..."
+            # nuget is pre-installed on Windows runners (from Visual Studio)
+            nuget install Microsoft.Direct3D.D3D12 -Version 1.715.0 -OutputDirectory "$env:TEMP\d3d12_pkg"
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "nuget install failed"
+              exit 1
             }
-            Remove-Item $zip
+            # Locate the package folder
+            $pkgDir = Get-ChildItem -Path "$env:TEMP\d3d12_pkg" -Directory | Where-Object { $_.Name -like "Microsoft.Direct3D.D3D12*" } | Select-Object -First 1
+            if (-not $pkgDir) {
+              Write-Error "Could not find installed package directory"
+              exit 1
+            }
+            # Copy the necessary files to the expected SDK location
+            $includeSrc = Join-Path $pkgDir.FullName "build\native\include"
+            $libSrc = Join-Path $pkgDir.FullName "build\native\lib"
+            if (Test-Path $includeSrc) {
+              # Ensure destination directories exist
+              New-Item -ItemType Directory -Force -Path $sdkPath\Include
+              New-Item -ItemType Directory -Force -Path $sdkPath\Lib
+              Copy-Item -Recurse -Force $includeSrc\* $sdkPath\Include\
+              Copy-Item -Recurse -Force $libSrc\* $sdkPath\Lib\
+              Write-Host "D3D12 SDK files copied to $sdkPath"
+            } else {
+              Write-Error "Expected folders (build/native/include, build/native/lib) not found in package"
+              exit 1
+            }
+            # Clean up temporary folder
+            Remove-Item -Recurse -Force "$env:TEMP\d3d12_pkg"
           }
-
+      # -----------------------------------------------------
       - name: Download pre-built ANGLE static libraries (x86_64)
         if: matrix.should_run == true && matrix.scons-flags == 'arch=x86_64'
         uses: dsaltares/fetch-gh-release-asset@1.1.2
@@ -201,6 +220,7 @@ jobs:
         if: matrix.should_run == true && matrix.scons-flags == 'arch=arm64'
         run: Expand-Archive -Force angle/angle_arm64.zip ${{ github.workspace }}/
 
+      # ---- AccessKit download using GitHub CLI ----
       - name: Download AccessKit SDK using GitHub CLI
         if: matrix.should_run == true
         env:
@@ -212,6 +232,7 @@ jobs:
       - name: Extract AccessKit SDK
         if: matrix.should_run == true
         run: Expand-Archive -Force accesskit-c-0.21.2.zip -DestinationPath ${{ github.workspace }}
+      # ---------------------------------------------------
 
       # Mono prerequisites
       - name: Setup .NET SDK
