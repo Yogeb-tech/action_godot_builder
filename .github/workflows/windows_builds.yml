@@ -143,6 +143,25 @@ jobs:
         run: echo "D3D12_SDK_PATH=$env:LOCALAPPDATA\Godot\build_deps" >> $env:GITHUB_ENV
         shell: pwsh
 
+
+      - name: Verify D3D12 SDK and fallback if needed
+        if: matrix.should_run == true
+        shell: pwsh
+        run: |
+          $sdkPath = $env:LOCALAPPDATA + "\Godot\build_deps"
+          if (-not (Test-Path "$sdkPath\Include\d3d12.h")) {
+            Write-Host "D3D12 SDK not found in $sdkPath, downloading manually..."
+            $url = "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.715.0"
+            $zip = "$env:TEMP\d3d12.zip"
+            Invoke-WebRequest -Uri $url -OutFile $zip
+            Expand-Archive -Force $zip -DestinationPath $sdkPath
+            if (Test-Path "$sdkPath\build\native\include") {
+              Move-Item -Force "$sdkPath\build\native\include" $sdkPath
+              Move-Item -Force "$sdkPath\build\native\lib" $sdkPath
+            }
+            Remove-Item $zip
+          }
+
       - name: Download pre-built ANGLE static libraries (x86_64)
         if: matrix.should_run == true && matrix.scons-flags == 'arch=x86_64'
         uses: dsaltares/fetch-gh-release-asset@1.1.2
@@ -182,24 +201,17 @@ jobs:
         if: matrix.should_run == true && matrix.scons-flags == 'arch=arm64'
         run: Expand-Archive -Force angle/angle_arm64.zip ${{ github.workspace }}/
 
-      - name: Download and Extract pre-built AccessKit via Python
+      - name: Download AccessKit SDK using GitHub CLI
         if: matrix.should_run == true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
-        id: accesskit-sdk
         run: |
-          $script = "./misc/scripts/install_accesskit.py"
-          if (Test-Path $script) {
-            python $script
-            if ($LASTEXITCODE -eq 0) {
-              echo "ACCESSKIT_ENABLED=yes" >> $env:GITHUB_OUTPUT
-            } else {
-              Write-Host "::warning::AccessKit installation script failed, building without AccessKit support."
-              echo "ACCESSKIT_ENABLED=no" >> $env:GITHUB_OUTPUT
-            }
-          } else {
-            Write-Host "::warning::AccessKit installation script not found, building without AccessKit support."
-            echo "ACCESSKIT_ENABLED=no" >> $env:GITHUB_OUTPUT
-          }
+          gh release download v0.21.2 -R AccessKit/accesskit -p "accesskit-c-0.21.2.zip" -O accesskit-c-0.21.2.zip
+
+      - name: Extract AccessKit SDK
+        if: matrix.should_run == true
+        run: Expand-Archive -Force accesskit-c-0.21.2.zip -DestinationPath ${{ github.workspace }}
 
       # Mono prerequisites
       - name: Setup .NET SDK
@@ -212,7 +224,7 @@ jobs:
         if: matrix.should_run == true && matrix.build-mono
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: arch=x86_64 module_mono_enabled=yes mono_glue=no ${{ inputs.module_flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
+          scons-flags: arch=x86_64 module_mono_enabled=yes mono_glue=no ${{ inputs.module_flags }} accesskit=yes
           platform: windows
           target: editor
 
@@ -228,7 +240,7 @@ jobs:
         env:
           D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.mono-flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.mono-flags }} accesskit=yes
           platform: windows
           target: ${{ matrix.target }}
 
@@ -239,7 +251,7 @@ jobs:
           D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
           SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} accesskit=yes
           platform: windows
           target: ${{ matrix.target }}
 
