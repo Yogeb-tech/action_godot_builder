@@ -3,30 +3,38 @@ on:
   workflow_call:
     inputs:
       base-branch:
-        description: "Base branch to use for the builds"
         type: string
       lto:
-        description: 'LTO mode. Options: "none", "thin", "full"'
         type: string
       repo:
-        description: "Repository to use for the build"
         type: string
       tag:
-        description: "tag to use for the build"
         type: string
       module_flags:
-        description: "Extra module flags, e.g. module_webm_enabled=no"
         type: string
       template_module_flags:
-        description: "Extra module flags for template build, e.g. module_webm_enabled=no"
         type: string
+      encryption_key:
+        type: string
+        default: ""
+      run_editor:
+        type: boolean
+        default: true
+      run_editor_mono:
+        type: boolean
+        default: false
+      run_template:
+        type: boolean
+        default: true
+      run_template_mono:
+        type: boolean
+        default: false
 
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
-  SCONSFLAGS: verbose=yes warnings=extra strict_checks=yes debug_symbols=no ${{ inputs.module_flags }} use_static_cpp=yes
+  SCONSFLAGS: verbose=yes warnings=extra d3d12=yes strict_checks=yes debug_symbols=no ${{ inputs.module_flags }} use_static_cpp=yes "angle_libs=${{ github.workspace }}/" "accesskit_sdk_path=${{ github.workspace }}/accesskit-c-0.21.2/"
   SCONS_CACHE_MSVC_CONFIG: true
-  PYTHONIOENCODING: utf8
 
 jobs:
   build-windows:
@@ -36,251 +44,233 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Editor (target=editor, arch=x86_64)
+          - name: Template release (x86_64)
+            target: template_release
+            scons-flags: arch=x86_64
+            build-mono: false
+            mono-flags: ""
+            should_run: ${{ inputs.run_template }}
+
+          - name: Template debug (x86_64)
+            target: template_debug
+            scons-flags: arch=x86_64
+            build-mono: false
+            mono-flags: ""
+            should_run: ${{ inputs.run_template }}
+
+          - name: Template release Mono (x86_64)
+            target: template_release
+            scons-flags: arch=x86_64
+            build-mono: true
+            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
+            should_run: ${{ inputs.run_template_mono }}
+
+          - name: Template debug Mono (x86_64)
+            target: template_debug
+            scons-flags: arch=x86_64
+            build-mono: true
+            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
+            should_run: ${{ inputs.run_template_mono }}
+
+          - name: Editor (x86_64)
             target: editor
             scons-flags: arch=x86_64
             build-mono: false
             mono-flags: ""
+            should_run: ${{ inputs.run_editor }}
 
-          - name: Editor (target=editor, arch=arm64)
-            target: editor
-            scons-flags: arch=arm64
-            build-mono: false
-            mono-flags: ""
-
-          - name: Template (target=template_release, arch=x86_64)
-            target: template_release
-            scons-flags: arch=x86_64
-            build-mono: false
-            mono-flags: ""
-
-          - name: Template (target=template_release, arch=x86)
-            target: template_release
-            scons-flags: arch=x86
-            build-mono: false
-            mono-flags: ""
-
-          - name: Template (target=template_release, arch=arm64)
-            target: template_release
-            scons-flags: arch=arm64
-            build-mono: false
-            mono-flags: ""
-
-          - name: Template (target=template_debug, arch=x86_64)
-            target: template_debug
-            scons-flags: arch=x86_64
-            build-mono: false
-            mono-flags: ""
-
-          - name: Template (target=template_debug, arch=x86)
-            target: template_debug
-            scons-flags: arch=x86
-            build-mono: false
-            mono-flags: ""
-
-          - name: Template (target=template_debug, arch=arm64)
-            target: template_debug
-            scons-flags: arch=arm64
-            build-mono: false
-            mono-flags: ""
-
-          - name: Editor Mono (target=editor, arch=x86_64)
+          - name: Editor Mono (x86_64)
             target: editor
             scons-flags: arch=x86_64
             build-mono: true
             mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Template Mono (target=template_release, arch=x86_64)
-            target: template_release
-            scons-flags: arch=x86_64
-            build-mono: true
-            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Template Mono (target=template_debug, arch=x86_64)
-            target: template_debug
-            scons-flags: arch=x86_64
-            build-mono: true
-            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Editor Mono (target=editor, arch=arm64)
-            target: editor
-            scons-flags: arch=arm64
-            build-mono: true
-            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Template Mono (target=template_release, arch=arm64)
-            target: template_release
-            scons-flags: arch=arm64
-            build-mono: true
-            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
-
-          - name: Template Mono (target=template_debug, arch=arm64)
-            target: template_debug
-            scons-flags: arch=arm64
-            build-mono: true
-            mono-flags: module_mono_enabled=yes mono_glue=yes mono_static=yes
+            should_run: ${{ inputs.run_editor_mono }}
 
     steps:
+      - name: Check if build target is enabled
+        if: matrix.should_run != true
+        shell: pwsh
+        run: |
+          Write-Host "This build target (${{ matrix.name }}) has been disabled via runner inputs."
+          Write-Host "Exiting step sequence cleanly without processing standard dependencies."
+          exit 0
+
       - name: Checkout
+        if: matrix.should_run == true
         uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.tag }}
           submodules: recursive
 
+      - name: Setup Node.js 24 (for tools/actions)
+        if: matrix.should_run == true
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
       - name: Restore Godot build cache
+        if: matrix.should_run == true
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: windows-${{ matrix.target }}${{ matrix.mono-flags }}-${{ matrix.scons-flags }}-${{ inputs.lto }}
         continue-on-error: true
 
       - name: Setup Python and SCons
+        if: matrix.should_run == true
         uses: ./.github/actions/godot-deps
 
-      # D3D12 SDK – try script, fallback to direct download if needed
-      - name: Install D3D12 SDK (try script)
-        id: d3d12_script
-        continue-on-error: true
-        shell: sh
+      - name: Map encryption key to step env and validate
+        if: matrix.should_run == true && inputs.encryption_key != '' && matrix.target != 'editor'
+        env:
+          ENCRYPTION_KEY_INPUT: ${{ inputs.encryption_key }}
+        shell: pwsh
+        run: |
+          if ($ENCRYPTION_KEY_INPUT -match '[;&|<>`$]') { Write-Error "encryption_key contains unsafe characters"; exit 1 }
+          Add-Content -Path $env:GITHUB_ENV -Value "ENCRYPTION_KEY=$ENCRYPTION_KEY_INPUT"
+
+      - name: Mask encryption key
+        if: matrix.should_run == true && inputs.encryption_key != '' && matrix.target != 'editor'
+        run: Write-Host "::add-mask::$env:ENCRYPTION_KEY"
+        shell: pwsh
+
+      - name: Download Direct3D 12 SDK components
+        if: matrix.should_run == true
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
-      - name: Fallback – download D3D12 Agility SDK manually
-        if: steps.d3d12_script.outcome != 'success'
-        shell: pwsh
-        run: |
-          $sdkPath = "$env:LOCALAPPDATA\Godot\build_deps"
-          $version = "1.711.3"
-          $url = "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/$version"
-          $zip = "$env:TEMP\d3d12.zip"
-          Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
-          Expand-Archive -Force $zip -DestinationPath "$env:TEMP\d3d12_extract"
-          $includeSrc = "$env:TEMP\d3d12_extract\build\native\include"
-          $libSrc = "$env:TEMP\d3d12_extract\build\native\lib"
-          if (Test-Path $includeSrc) {
-            New-Item -ItemType Directory -Force -Path $sdkPath\Include
-            New-Item -ItemType Directory -Force -Path $sdkPath\Lib
-            Copy-Item -Recurse -Force $includeSrc\* $sdkPath\Include\
-            Copy-Item -Recurse -Force $libSrc\* $sdkPath\Lib\
-            Write-Host "D3D12 SDK installed via fallback."
-          } else {
-            Write-Error "Fallback installation failed."
-            exit 1
-          }
-          Remove-Item -Force $zip, "$env:TEMP\d3d12_extract" -Recurse -ErrorAction SilentlyContinue
-
-      - name: Set D3D12_ENABLED based on presence of headers
-        id: d3d12_check
-        shell: pwsh
-        run: |
-          $sdkPath = "$env:LOCALAPPDATA\Godot\build_deps"
-          if (Test-Path "$sdkPath\Include\d3d12.h") {
-            echo "D3D12_ENABLED=yes" >> $env:GITHUB_OUTPUT
-          } else {
-            echo "D3D12_ENABLED=no" >> $env:GITHUB_OUTPUT
-          }
-
-      - name: Set D3D12_SDK_PATH environment variable
+      - name: Set D3D12 SDK path
+        if: matrix.should_run == true
         run: echo "D3D12_SDK_PATH=$env:LOCALAPPDATA\Godot\build_deps" >> $env:GITHUB_ENV
         shell: pwsh
 
-      # ANGLE SDK
-      - name: Download pre-built ANGLE
-        id: angle_script
-        continue-on-error: true
-        shell: sh
-        run: python ./misc/scripts/install_angle.py
+      - name: Download pre-built ANGLE static libraries (x86_64)
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86_64'
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: godotengine/godot-angle-static
+          version: tags/chromium/6601.2
+          file: godot-angle-static-x86_64-msvc-release.zip
+          target: angle/angle_x86_64.zip
 
-      - name: Set ANGLE_ENABLED based on existence of angle_libs
-        id: angle_check
-        shell: pwsh
-        run: |
-          # The script places files in the root? Actually angle_libs path is set later.
-          # We'll just trust the script, but if it fails, we can fallback later.
-          # For now, set to "yes" if the script succeeded.
-          if ("${{ steps.angle_script.outcome }}" -eq "success") {
-            echo "ANGLE_ENABLED=yes" >> $env:GITHUB_OUTPUT
-          } else {
-            # Fallback: download using gh if needed? We'll skip for brevity, but could add.
-            echo "ANGLE_ENABLED=no" >> $env:GITHUB_OUTPUT
-          }
+      - name: Extract pre-built ANGLE static libraries (x86_64)
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86_64'
+        run: Expand-Archive -Force angle/angle_x86_64.zip ${{ github.workspace }}/
 
-      # AccessKit
-      - name: Download AccessKit SDK using GitHub CLI
-        id: accesskit_download
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download pre-built ANGLE static libraries (x86_32)
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86'
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: godotengine/godot-angle-static
+          version: tags/chromium/6601.2
+          file: godot-angle-static-x86_32-msvc-release.zip
+          target: angle/angle_x86_32.zip
+
+      - name: Extract pre-built ANGLE static libraries (x86_32)
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=x86'
+        run: Expand-Archive -Force angle/angle_x86_32.zip ${{ github.workspace }}/
+
+      - name: Download pre-built ANGLE static libraries (arm64)
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=arm64'
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: godotengine/godot-angle-static
+          version: tags/chromium/6601.2
+          file: godot-angle-static-arm64-msvc-release.zip
+          target: angle/angle_arm64.zip
+
+      - name: Extract pre-built ANGLE static libraries (arm64)
+        if: matrix.should_run == true && matrix.scons-flags == 'arch=arm64'
+        run: Expand-Archive -Force angle/angle_arm64.zip ${{ github.workspace }}/
+
+      - name: Download and Extract pre-built AccessKit via Python
+        if: matrix.should_run == true
         shell: pwsh
+        id: accesskit-sdk
         run: |
-          gh release download v0.21.2 -R AccessKit/accesskit -p "accesskit-c-0.21.2.zip" -O accesskit-c-0.21.2.zip
-          Expand-Archive -Force accesskit-c-0.21.2.zip -DestinationPath ${{ github.workspace }}
-          # The extracted folder should be at ${{ github.workspace }}/accesskit-c-0.21.2/
-          if (Test-Path "${{ github.workspace }}/accesskit-c-0.21.2/include") {
-            echo "ACCESSKIT_ENABLED=yes" >> $env:GITHUB_OUTPUT
+          $script = "./misc/scripts/install_accesskit.py"
+          if (Test-Path $script) {
+            python $script
+            if ($LASTEXITCODE -eq 0) {
+              echo "ACCESSKIT_ENABLED=yes" >> $env:GITHUB_OUTPUT
+            } else {
+              Write-Host "::warning::AccessKit installation script failed, building without AccessKit support."
+              echo "ACCESSKIT_ENABLED=no" >> $env:GITHUB_OUTPUT
+            }
           } else {
+            Write-Host "::warning::AccessKit installation script not found, building without AccessKit support."
             echo "ACCESSKIT_ENABLED=no" >> $env:GITHUB_OUTPUT
           }
 
       # Mono prerequisites
       - name: Setup .NET SDK
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: "8.0.100"
+          dotnet-version: "6.0.x"
 
       - name: Mono tools build (pre-glue)
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: arch=x86_64 module_mono_enabled=yes mono_glue=no ${{ inputs.module_flags }} d3d12=${{ steps.d3d12_check.outputs.D3D12_ENABLED }} angle=${{ steps.angle_check.outputs.ANGLE_ENABLED }} accesskit=${{ steps.accesskit_download.outputs.ACCESSKIT_ENABLED }}
+          scons-flags: arch=x86_64 module_mono_enabled=yes mono_glue=no ${{ inputs.module_flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: windows
           target: editor
 
       - name: Generate C# glue
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         run: |
           .\bin\godot.windows.editor.x86_64.mono.exe --headless --generate-mono-glue .\modules\mono\glue
 
       # Compilation
       - name: Compilation (editor)
-        if: matrix.target == 'editor'
+        if: matrix.should_run == true && matrix.target == 'editor'
         uses: ./.github/actions/godot-build
         env:
           D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.mono-flags }} d3d12=${{ steps.d3d12_check.outputs.D3D12_ENABLED }} angle=${{ steps.angle_check.outputs.ANGLE_ENABLED }} accesskit=${{ steps.accesskit_download.outputs.ACCESSKIT_ENABLED }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.module_flags }} ${{ matrix.mono-flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: windows
           target: ${{ matrix.target }}
 
       - name: Compilation (template)
-        if: matrix.target != 'editor'
+        if: matrix.should_run == true && matrix.target != 'editor'
         uses: ./.github/actions/godot-build
         env:
           D3D12_SDK_PATH: ${{ env.D3D12_SDK_PATH }}
+          SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
         with:
-          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} d3d12=${{ steps.d3d12_check.outputs.D3D12_ENABLED }} angle=${{ steps.angle_check.outputs.ANGLE_ENABLED }} accesskit=${{ steps.accesskit_download.outputs.ACCESSKIT_ENABLED }}
+          scons-flags: ${{ env.SCONSFLAGS }} ${{ matrix.scons-flags }} ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.mono-flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
           platform: windows
           target: ${{ matrix.target }}
 
-      # Post-build
+      - name: Checkout builder repo (cache purge script)
+        if: matrix.should_run == true
+        uses: actions/checkout@v6
+        with:
+          repository: appsinacup/action_godot_builder
+          path: builder_repo
+          fetch-depth: 1
+
       - name: Save Godot build cache
+        if: matrix.should_run == true
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: windows-${{ matrix.target }}${{ matrix.mono-flags }}-${{ matrix.scons-flags }}-${{ inputs.lto }}
-          purge-cache-script: misc/scripts/purge_cache.py
         continue-on-error: true
 
       - name: Build .NET solutions
-        if: matrix.build-mono
+        if: matrix.should_run == true && matrix.build-mono
         run: |
           dotnet --info
           ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=windows --werror
 
       - name: Prepare artifact
+        if: matrix.should_run == true
         run: |
-          Remove-Item bin/build_deps -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
 
       - name: Upload artifact
+        if: matrix.should_run == true
         uses: actions/upload-artifact@v7
         with:
           name: windows-${{ matrix.target }}${{ matrix.mono-flags }}-${{ matrix.scons-flags }}-${{ inputs.lto }}
