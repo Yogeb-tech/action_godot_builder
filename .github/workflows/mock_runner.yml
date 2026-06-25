@@ -144,5 +144,5 @@ jobs:
 
       - name: Pause before finishing
         run: |
-          echo "Waiting 360 seconds..."
-          sleep 360
+          echo "Waiting 120 seconds..."
+          sleep 120
