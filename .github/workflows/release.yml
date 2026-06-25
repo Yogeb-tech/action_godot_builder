@@ -110,7 +110,7 @@ jobs:
       - name: Setup Node.js 24 (for tools/actions)
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
 
       - uses: actions/download-artifact@v8
         with:
@@ -152,7 +152,7 @@ jobs:
 
       - name: Setup Vulkan SDK
         run: |
-          sh builder_repo/install_vulkan_sdk_macos.sh
+          sh misc/scripts/install_vulkan_sdk_macos.sh
 
       # https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
       - name: Install the Apple certificate
