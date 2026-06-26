@@ -131,7 +131,7 @@ jobs:
       - name: Setup Vulkan SDK
         if: matrix.should_run == true
         run: |
-          sh misc/scripts/install_vulkan_sdk_macos.sh
+          sh builder_repo/install_vulkan_sdk_macos.sh
 
       - name: Mono tools build (pre-glue)
         if: matrix.should_run == true && matrix.build-mono
