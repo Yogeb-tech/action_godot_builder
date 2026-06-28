@@ -146,3 +146,17 @@ jobs:
         run: |
           echo "Waiting 120 seconds..."
           sleep 120
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag_release }}
+          name: Mock Release ${{ inputs.request_id }}
+          body: |
+            Build from workflow run #${{ github.run_id }}
+            - Repository: ${{ inputs.release_repo}}
+            - Base branch: ${{ inputs.base-branch }}
+            - LTO: ${{ inputs.lto }}
+            files: godot_build_${{ inputs.tag_release }}.zip
+            repo: ${{ inputs.release_repo }}
+        if: success() # only run if all previous steps succeeded
