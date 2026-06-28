@@ -111,21 +111,22 @@ jobs:
         with:
           dotnet-version: "6.0.x"
 
+      # --- Fixed glue generation ---
       - name: Build Linux Editor (for glue generation)
         if: matrix.should_run == true && matrix.build-mono
         run: |
           scons platform=linuxbsd target=editor arch=x86_64 \
             ${{ env.SCONSFLAGS }} \
-            ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} \
             ${{ inputs.template_module_flags }} \
-            module_mono_enabled=yes mono_glue=no
+            module_mono_enabled=yes mono_glue=no \
+            lto=none
 
       - name: Generate C# glue
         if: matrix.should_run == true && matrix.build-mono
         run: |
           ./bin/godot.linuxbsd.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
 
-      # ---- Template builds remain unchanged ----
+      # --- Template builds (unchanged) ---
       - name: Compilation (arm64)
         if: matrix.should_run == true
         uses: ./.github/actions/godot-build
