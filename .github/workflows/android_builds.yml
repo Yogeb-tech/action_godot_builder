@@ -112,6 +112,16 @@ jobs:
         with:
           dotnet-version: "6.0.x"
 
+      # Generate Mono glue (only for mono builds)
+      - name: Generate Mono Glue
+        if: matrix.should_run == true && matrix.build-mono
+        run: |
+          scons platform=android target=editor arch=arm64 \
+            ${{ env.SCONSFLAGS }} \
+            ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} \
+            ${{ inputs.template_module_flags }} \
+            ${{ matrix.scons-mono-flags }}
+
       - name: Compilation (arm64)
         if: matrix.should_run == true
         uses: ./.github/actions/godot-build
