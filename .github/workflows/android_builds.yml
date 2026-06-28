@@ -41,7 +41,6 @@ on:
         type: boolean
         default: false
 
-# Global Settings
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GODOT_BASE_BRANCH: ${{ inputs.base-branch }}
@@ -112,16 +111,21 @@ jobs:
         with:
           dotnet-version: "6.0.x"
 
-      # Generate Mono glue (only for mono builds)
-      - name: Generate Mono Glue
+      - name: Build Linux Editor (for glue generation)
         if: matrix.should_run == true && matrix.build-mono
         run: |
-          scons platform=android target=editor arch=arm64 \
+          scons platform=linuxbsd target=editor arch=x86_64 \
             ${{ env.SCONSFLAGS }} \
             ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} \
             ${{ inputs.template_module_flags }} \
-            ${{ matrix.scons-mono-flags }}
+            module_mono_enabled=yes mono_glue=no
 
+      - name: Generate C# glue
+        if: matrix.should_run == true && matrix.build-mono
+        run: |
+          ./bin/godot.linuxbsd.editor.x86_64.mono --headless --generate-mono-glue ./modules/mono/glue
+
+      # ---- Template builds remain unchanged ----
       - name: Compilation (arm64)
         if: matrix.should_run == true
         uses: ./.github/actions/godot-build
