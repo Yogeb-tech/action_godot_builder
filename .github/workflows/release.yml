@@ -469,22 +469,27 @@ jobs:
             fi
           done
 
-      - name: List release directory
-        run: ls -R release
+      - name: Package all artifacts into a single ZIP
+        run: |
+          set -e
+          VERSION=${{ inputs.tag_release }}
+          mkdir -p combined
+          # Copy all .zip and .tpz files from release/ into combined/
+          find release -maxdepth 1 -type f \( -name "*.zip" -o -name "*.tpz" \) -exec cp {} combined/ \;
+          # Create the combined archive
+          cd combined
+          zip -q -9 -r "../Godot_v${VERSION}_all.zip" .
+          cd ..
+          # List the created archive
+          ls -l Godot_v${VERSION}_all.zip
+          - name: List release directory
+              run: ls -R release
 
       - name: Set release files output
         id: set_files
         run: |
-          # Read the list of files into a comma-separated string for the release step
-          files=""
-          while IFS= read -r line; do
-            if [ -n "$line" ]; then
-              files="$files,$line"
-            fi
-          done < release_files.env
-          # Remove leading comma
-          files="${files#,}"
-          echo "release_files=$files" >> $GITHUB_OUTPUT
+          VERSION=${{ inputs.tag_release }}
+          echo "release_files=Godot_v${VERSION}_all.zip" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
