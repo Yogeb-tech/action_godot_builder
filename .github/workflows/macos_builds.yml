@@ -218,15 +218,15 @@ jobs:
           platform: macos
           target: ${{ matrix.target }}
 
-      - name: Compilation (x86_64 template)
-        if: ${{ matrix.should_run == true && (matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
-        uses: ./.github/actions/godot-build
-        env:
-          SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
-        with:
-          scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
-          platform: macos
-          target: ${{ matrix.target }}
+      #- name: Compilation (x86_64 template)
+      #  if: ${{ matrix.should_run == true && (matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
+      #  uses: ./.github/actions/godot-build
+      #  env:
+      #    SCRIPT_AES256_ENCRYPTION_KEY: ${{ inputs.encryption_key }}
+      #  with:
+      #    scons-flags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ contains(inputs.template_module_flags, 'lto=') && '' || inputs.lto }} ${{ inputs.template_module_flags }} ${{ matrix.scons-mono-flags }} accesskit=${{ steps.accesskit-sdk.outputs.ACCESSKIT_ENABLED }}
+      #    platform: macos
+      #   target: ${{ matrix.target }}
 
       - name: Compilation (arm64 template)
         if: ${{ matrix.should_run == true && (matrix.target != 'editor' && ((matrix['build-mono'] == true && (inputs.run_template_mono == 'true' || inputs.run_template_mono == true)) || (matrix['build-mono'] != true && (inputs.run_template == 'true' || inputs.run_template == true)))) }}
