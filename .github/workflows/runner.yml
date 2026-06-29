@@ -172,28 +172,29 @@ jobs:
       run_template_mono: ${{ inputs.run_template_mono }}
     secrets: inherit
 
-# release:
-#   name: 🚀 Create Release
-#   permissions:
-#     contents: write
-#     actions: read
-#     packages: write
-#   needs:
-#     - android-build
-#     - ios-build
-#     - linux-build
-#     - macos-build
-#     - windows-build
-#     - web-build
-#   uses: ./.github/workflows/release.yml
-#   with:
-#     base-branch: ${{ inputs.base-branch }}
-#     repo: ${{ inputs.repo }}
-#     tag: ${{ inputs.tag }}
-#     tag_release: ${{ inputs.tag_release }}
-#     lto: ${{ inputs.lto }}
-#     module_flags: ${{ inputs.module_flags }}
-#     template_module_flags: ${{ inputs.template_module_flags }}
-#     encryption_key: ${{ inputs.encryption_key }}
-#     release_repo: ${{ inputs.release_repo }}
-#   secrets: inherit
+  release:
+    name: 🚀 Create Release
+    permissions:
+      contents: write
+      actions: read
+      packages: write
+    needs:
+      - android-build
+      - ios-build
+      - linux-build
+      - macos-build
+      - windows-build
+      - web-build
+    uses: ./.github/workflows/release.yml
+    with:
+      request_id: ${{ inputs.request_id }}
+      base-branch: ${{ inputs.base-branch }}
+      repo: ${{ inputs.repo }}
+      tag: ${{ inputs.tag }}
+      tag_release: ${{ inputs.tag_release }}
+      lto: ${{ inputs.lto }} # Original LTO, not mapped (for release description)
+      module_flags: ${{ inputs.module_flags }}
+      template_module_flags: ${{ inputs.template_module_flags }}
+      encryption_key: ${{ inputs.encryption_key }}
+      release_repo: ${{ inputs.release_repo }}
+    secrets: inherit

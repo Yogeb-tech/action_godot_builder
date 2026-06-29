@@ -3,6 +3,11 @@ name: 🚀 Create Release
 on:
   workflow_dispatch:
     inputs:
+      request_id:
+        description: "Unique ID for this request"
+        type: string
+        required: true
+        default: ""
       repo:
         description: "Repository to use for the build"
         type: string
@@ -45,6 +50,11 @@ on:
           - "lto=full"
   workflow_call:
     inputs:
+      request_id:
+        description: "Unique ID for this request"
+        type: string
+        required: true
+        default: ""
       repo:
         required: false
         type: string
@@ -479,7 +489,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.tag }}-${{ inputs.tag_release }}_${{ inputs.template_module_flags }}
+          tag_name: build-${{ inputs.request_id }}
           name: "Gonuts ${{ inputs.tag_release }} - ${{ inputs.template_module_flags }}"
           repository: ${{ inputs.release_repo != '' && inputs.release_repo || github.repository }}
           token: ${{ secrets.GH_TOKEN }}
