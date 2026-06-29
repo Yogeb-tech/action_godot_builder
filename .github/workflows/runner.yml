@@ -185,7 +185,7 @@ jobs:
       - macos-build
       - windows-build
       - web-build
-    if: always() && !failure() 
+    if: always() && !failure()
     uses: ./.github/workflows/release.yml
     with:
       request_id: ${{ inputs.request_id }}
