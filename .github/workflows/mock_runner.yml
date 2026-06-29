@@ -72,6 +72,8 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Map inputs to step env and validate
@@ -146,3 +148,16 @@ jobs:
         run: |
           echo "Waiting 120 seconds..."
           sleep 120
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ inputs.request_id }}
+          name: Mock Release ${{ inputs.request_id }}
+          repository: ${{ inputs.release_repo || github.repository }}
+          body: |
+            Build from workflow run #${{ github.run_id }}
+            - Repository: ${{ inputs.release_repo || inputs.repo }}
+            - Base branch: ${{ inputs.base-branch }}
+            - LTO: ${{ inputs.lto }}
+          files: godot_build_${{ inputs.tag_release }}.zip
